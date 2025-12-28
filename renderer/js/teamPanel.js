@@ -4,13 +4,6 @@
 
 let teamPanelOpen = false;
 
-// Get total kills for a team (sum of all player kills)
-function getTeamKills(teamId) {
-  const team = GameState.teams[teamId];
-  if (!team || !team.players) return 0;
-  return Object.values(team.players).reduce((sum, p) => sum + (p.kills || 0), 0);
-}
-
 // Count specific asset types for a team
 function getTeamAssetCounts(teamId) {
   const counts = {
@@ -75,17 +68,6 @@ function createTeamPanelHTML() {
         <div class="team-stat">
           <div class="team-stat-value" id="stat-land">0</div>
           <div class="team-stat-label">Land</div>
-        </div>
-      </div>
-
-      <div class="team-stats team-stats-2col">
-        <div class="team-stat">
-          <div class="team-stat-value" id="stat-kills">0</div>
-          <div class="team-stat-label">Total Kills</div>
-        </div>
-        <div class="team-stat">
-          <div class="team-stat-value" id="stat-objects-lost">0</div>
-          <div class="team-stat-label">Objects Lost</div>
         </div>
       </div>
 
@@ -193,17 +175,21 @@ function updateTeamPanel() {
   // Update stats
   document.getElementById('stat-gold').textContent = GameState.getTeamGold(currentTeam);
   document.getElementById('stat-land').textContent = GameState.getTeamLandCount(currentTeam);
-  document.getElementById('stat-kills').textContent = getTeamKills(currentTeam);
-  document.getElementById('stat-objects-lost').textContent = team.objectsLost || 0;
 
-  // Update asset counts
+  // Update asset counts with lost numbers in parentheses
   const assetCounts = getTeamAssetCounts(currentTeam);
-  document.getElementById('asset-castle').textContent = assetCounts.castle;
-  document.getElementById('asset-wall').textContent = assetCounts.wall;
-  document.getElementById('asset-town').textContent = assetCounts.town;
-  document.getElementById('asset-army').textContent = assetCounts.army;
-  document.getElementById('asset-ship').textContent = assetCounts.ship;
-  document.getElementById('asset-bridge').textContent = assetCounts.bridge;
+  const lost = team.objectsLost || {};
+
+  const formatAsset = (count, lostCount) => {
+    return lostCount > 0 ? `${count} (${lostCount})` : `${count}`;
+  };
+
+  document.getElementById('asset-castle').textContent = formatAsset(assetCounts.castle, lost.castle || 0);
+  document.getElementById('asset-wall').textContent = formatAsset(assetCounts.wall, lost.wall || 0);
+  document.getElementById('asset-town').textContent = formatAsset(assetCounts.town, lost.town || 0);
+  document.getElementById('asset-army').textContent = formatAsset(assetCounts.army, lost.army || 0);
+  document.getElementById('asset-ship').textContent = formatAsset(assetCounts.ship, lost.ship || 0);
+  document.getElementById('asset-bridge').textContent = formatAsset(assetCounts.bridge, lost.bridge || 0);
 
   // Update player list
   renderPlayerList();

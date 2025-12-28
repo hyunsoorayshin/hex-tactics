@@ -345,11 +345,13 @@ function applyDamage(target, damage, attackerTeamId, attackerPlayerId) {
         }
       }
 
-      // Also destroy ship - track objectsLost
+      // Also destroy ship - track objectsLost per type
       const ship = GameState.hexObjects[target.hexKey];
       if (ship) {
         if (ship.teamId !== undefined && GameState.teams[ship.teamId]) {
-          GameState.teams[ship.teamId].objectsLost = (GameState.teams[ship.teamId].objectsLost || 0) + 1;
+          const team = GameState.teams[ship.teamId];
+          if (!team.objectsLost) team.objectsLost = {};
+          team.objectsLost.ship = (team.objectsLost.ship || 0) + 1;
         }
         // Credit ship kill to attacker
         if (attackerTeamId !== undefined && attackerPlayerId) {
@@ -397,9 +399,11 @@ function destroyPlayer(teamId, playerId, name, attackerTeamId, attackerPlayerId)
 }
 
 function destroyObject(hexKey, type, name, ownerTeamId, attackerTeamId, attackerPlayerId) {
-  // Track objectsLost for the owner team
+  // Track objectsLost per type for the owner team
   if (ownerTeamId !== undefined && GameState.teams[ownerTeamId]) {
-    GameState.teams[ownerTeamId].objectsLost = (GameState.teams[ownerTeamId].objectsLost || 0) + 1;
+    const team = GameState.teams[ownerTeamId];
+    if (!team.objectsLost) team.objectsLost = {};
+    team.objectsLost[type] = (team.objectsLost[type] || 0) + 1;
   }
 
   // Credit the kill to the attacker (objects count as kills too)

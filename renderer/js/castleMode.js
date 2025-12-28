@@ -297,6 +297,11 @@ function addCastleMarker(hexKey, teamId) {
       onMoveModeHexClick(hexKey, null, e.shiftKey);
       return;
     }
+    if (isPlayerMode()) {
+      // Delegate to player mode for revival at castle
+      onPlayerModeHexClick(hexKey, null);
+      return;
+    }
 
     // Castle mode: Cmd+click to remove
     if (isCastleMode()) {

@@ -206,6 +206,11 @@ function addTownMarker(hexKey, teamId) {
       onCastleModeHexClick(hexKey, null, metaKey);
       return;
     }
+    if (isPlayerMode()) {
+      // Delegate to player mode for revival at town
+      onPlayerModeHexClick(hexKey, null);
+      return;
+    }
 
     // Town mode: Cmd+click to remove
     if (isTownMode()) {

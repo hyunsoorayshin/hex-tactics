@@ -1,87 +1,91 @@
-const map = document.getElementById('map');
+// ============================================
+// Main Entry Point
+// ============================================
 
-let scale = 1;
-let translateX = 0;
-let translateY = 0;
-let isPanning = false;
-let startX = 0;
-let startY = 0;
-let spacePressed = false;
+// Initialize the application
+function initApp() {
+  const mapImg = document.getElementById('map');
 
-const MIN_SCALE = 1;
-const MAX_SCALE = 5;
-const ZOOM_SPEED = 0.1;
+  const onMapReady = () => {
+    // Initialize modules
+    initPanZoom();
+    initTeamPanel();
+    initSaveLoad();
 
-function updateTransform() {
-  map.style.transform = `translate(-50%, -50%) translate(${translateX}px, ${translateY}px) scale(${scale})`;
-}
+    // Generate hex grid and set view
+    generateHexGrid();
+    resetView();
 
-function resetView() {
-  scale = 1;
-  translateX = 0;
-  translateY = 0;
-  updateTransform();
-}
+    // Auto-load last save
+    autoLoadGame();
 
-// Scroll to zoom
-window.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const delta = e.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED;
-  const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale + delta));
+    // Update UI
+    updateStatus();
+  };
 
-  if (newScale === 1) {
-    translateX = 0;
-    translateY = 0;
+  // Wait for map image to load
+  if (mapImg.complete) {
+    onMapReady();
+  } else {
+    mapImg.onload = onMapReady;
   }
+}
 
-  scale = newScale;
-  updateTransform();
-}, { passive: false });
+// ============================================
+// Keyboard Controls
+// ============================================
 
-// Track spacebar
 window.addEventListener('keydown', (e) => {
+  // Escape - reset view or close panel
   if (e.key === 'Escape') {
+    if (isTeamPanelOpen()) {
+      closeTeamPanel();
+      return;
+    }
     resetView();
   }
+
+  // Space - pan mode
   if (e.code === 'Space') {
     e.preventDefault();
-    spacePressed = true;
-    document.body.style.cursor = isPanning ? 'grabbing' : 'grab';
+    onSpaceDown();
+  }
+
+  // L - toggle land mode
+  if (e.key === 'l' || e.key === 'L') {
+    toggleLandMode();
+    updateStatus();
+    console.log('Land mode:', isLandMode() ? 'ON' : 'OFF');
+  }
+
+  // Shift + 1-0 - select team
+  if (e.shiftKey && e.code.startsWith('Digit')) {
+    const digit = parseInt(e.code.replace('Digit', ''));
+    if (setCurrentTeam(digit)) {
+      updateStatus();
+      // Update team panel if open
+      if (isTeamPanelOpen()) {
+        updateTeamPanel();
+      }
+      console.log('Selected Team:', digit === 0 ? 10 : digit);
+    }
+  }
+
+  // Tab - open/close team panel
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    toggleTeamPanel();
   }
 });
 
 window.addEventListener('keyup', (e) => {
   if (e.code === 'Space') {
-    spacePressed = false;
-    isPanning = false;
-    document.body.style.cursor = 'default';
+    onSpaceUp();
   }
 });
 
-// Start pan on mousedown while space is held
-window.addEventListener('mousedown', (e) => {
-  if (spacePressed && e.button === 0) {
-    isPanning = true;
-    startX = e.clientX - translateX;
-    startY = e.clientY - translateY;
-    document.body.style.cursor = 'grabbing';
-    e.preventDefault();
-  }
-});
+// ============================================
+// Start Application
+// ============================================
 
-// Pan while dragging
-window.addEventListener('mousemove', (e) => {
-  if (isPanning) {
-    translateX = e.clientX - startX;
-    translateY = e.clientY - startY;
-    updateTransform();
-  }
-});
-
-// Stop pan on mouseup
-window.addEventListener('mouseup', () => {
-  if (isPanning) {
-    isPanning = false;
-    document.body.style.cursor = spacePressed ? 'grab' : 'default';
-  }
-});
+document.addEventListener('DOMContentLoaded', initApp);

@@ -2,20 +2,6 @@
 // Game State Module
 // ============================================
 
-// Teams Configuration
-const TEAMS = {
-  1: { name: 'Team 1', color: 'rgba(255, 0, 0, 0.4)', border: '#ff0000' },
-  2: { name: 'Team 2', color: 'rgba(0, 128, 255, 0.4)', border: '#0080ff' },
-  3: { name: 'Team 3', color: 'rgba(0, 255, 0, 0.4)', border: '#00ff00' },
-  4: { name: 'Team 4', color: 'rgba(255, 255, 0, 0.4)', border: '#ffff00' },
-  5: { name: 'Team 5', color: 'rgba(255, 0, 255, 0.4)', border: '#ff00ff' },
-  6: { name: 'Team 6', color: 'rgba(0, 255, 255, 0.4)', border: '#00ffff' },
-  7: { name: 'Team 7', color: 'rgba(255, 128, 0, 0.4)', border: '#ff8000' },
-  8: { name: 'Team 8', color: 'rgba(128, 0, 255, 0.4)', border: '#8000ff' },
-  9: { name: 'Team 9', color: 'rgba(255, 128, 128, 0.4)', border: '#ff8080' },
-  0: { name: 'Team 10', color: 'rgba(128, 255, 128, 0.4)', border: '#80ff80' }
-};
-
 // Current mode state
 let currentTeam = 1;
 let landMode = false;
@@ -34,18 +20,18 @@ const GameState = {
   // Attack placements: { id: { from: "q,r", to: "q,r", data: {} } }
   attacks: {},
 
-  // Teams data: { teamId: { name, players: { playerId: { name, gold } } } }
+  // Teams data: { teamId: { name, color, border, players } }
   teams: {
-    1: { name: 'Team 1', players: {} },
-    2: { name: 'Team 2', players: {} },
-    3: { name: 'Team 3', players: {} },
-    4: { name: 'Team 4', players: {} },
-    5: { name: 'Team 5', players: {} },
-    6: { name: 'Team 6', players: {} },
-    7: { name: 'Team 7', players: {} },
-    8: { name: 'Team 8', players: {} },
-    9: { name: 'Team 9', players: {} },
-    0: { name: 'Team 10', players: {} }
+    1: { name: 'Team 1', color: 'rgba(255, 0, 0, 0.4)', border: '#ff0000', players: {} },
+    2: { name: 'Team 2', color: 'rgba(0, 128, 255, 0.4)', border: '#0080ff', players: {} },
+    3: { name: 'Team 3', color: 'rgba(0, 255, 0, 0.4)', border: '#00ff00', players: {} },
+    4: { name: 'Team 4', color: 'rgba(255, 255, 0, 0.4)', border: '#ffff00', players: {} },
+    5: { name: 'Team 5', color: 'rgba(255, 0, 255, 0.4)', border: '#ff00ff', players: {} },
+    6: { name: 'Team 6', color: 'rgba(0, 255, 255, 0.4)', border: '#00ffff', players: {} },
+    7: { name: 'Team 7', color: 'rgba(255, 128, 0, 0.4)', border: '#ff8000', players: {} },
+    8: { name: 'Team 8', color: 'rgba(128, 0, 255, 0.4)', border: '#8000ff', players: {} },
+    9: { name: 'Team 9', color: 'rgba(255, 128, 128, 0.4)', border: '#ff8080', players: {} },
+    0: { name: 'Team 10', color: 'rgba(128, 255, 128, 0.4)', border: '#80ff80', players: {} }
   },
 
   // Export state for saving
@@ -137,7 +123,7 @@ function getCurrentTeam() {
 }
 
 function setCurrentTeam(teamId) {
-  if (TEAMS.hasOwnProperty(teamId)) {
+  if (GameState.teams.hasOwnProperty(teamId)) {
     currentTeam = teamId;
     return true;
   }

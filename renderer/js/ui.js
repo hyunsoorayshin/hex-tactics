@@ -12,7 +12,7 @@ function updateStatus() {
   }
 
   const currentTeam = getCurrentTeam();
-  const teamInfo = TEAMS[currentTeam];
+  const teamInfo = GameState.teams[currentTeam];
   const landModeActive = isLandMode();
   const modeText = landModeActive ? 'LAND MODE' : 'SELECT MODE';
 

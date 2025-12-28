@@ -16,16 +16,19 @@ rayhaven2/
 ├── saves/                  # Save files (git-ignored)
 ├── assets/
 │   ├── hex-objects/        # Objects placeable on hexes
-│   └── edge-objects/       # Objects placeable on edges
+│   ├── edge-objects/       # Objects placeable on edges
+│   └── mascots/            # Team mascot images (team1.png - team10.png)
 └── renderer/
-    ├── index.html          # Main window HTML/CSS
+    ├── index.html          # Main window HTML (minimal structure)
     ├── renderer.js         # Entry point, keyboard controls
     ├── map.png             # Game map backdrop
+    ├── css/
+    │   └── theme.css       # Fantasy theme (black & gold palette)
     └── js/
         ├── gameState.js    # State management
         ├── hexGrid.js      # Hex grid system
         ├── panZoom.js      # Navigation controls
-        ├── teamPanel.js    # Team UI panel
+        ├── teamPanel.js    # Team UI panel (creates own HTML)
         ├── saveLoad.js     # Persistence
         └── ui.js           # Status bar, notifications
 ```
@@ -82,15 +85,16 @@ Map navigation:
 
 #### `teamPanel.js`
 Team management UI:
+- Creates panel HTML dynamically via `createTeamPanelHTML()`
 - Modal panel opened with Tab key
 - Displays: team name, total gold, land count, assets
-- Player list with add/edit/remove
+- Player list with add/edit/remove (uses addEventListener for CSP compliance)
 - Team gold = sum of player gold
 - Exports: `initTeamPanel()`, `openTeamPanel()`, `closeTeamPanel()`, `toggleTeamPanel()`, `updateTeamPanel()`, `isTeamPanelOpen()`
 
 #### `saveLoad.js`
 Persistence layer:
-- `autoLoadGame()` - Loads most recent save on startup
+- `autoLoadGame()` - Available but not called on startup (app starts blank)
 - `renderGameState()` - Applies loaded state to UI
 - `initSaveLoad()` - Sets up IPC event listeners
 
@@ -108,6 +112,15 @@ Application entry point:
   - `L` - Toggle land mode
   - `Shift+1-0` - Select team
   - `Tab` - Toggle team panel
+
+### Styling
+
+#### `css/theme.css`
+Fantasy theme with black & gold palette:
+- CSS custom properties (variables) for colors, spacing, typography
+- Base styles: reset, body, scrollbar
+- Component styles: hex grid, status bar, notifications, team panel
+- All styling centralized here (no inline styles in HTML)
 
 ## Script Load Order
 
@@ -175,6 +188,8 @@ GameState = {
   teams: {
     teamId: {
       name: string,
+      color: string,   // rgba fill color for land
+      border: string,  // hex color for borders/outlines
       players: {
         playerId: { name: string, gold: number }
       }

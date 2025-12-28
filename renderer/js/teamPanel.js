@@ -8,6 +8,52 @@ function isTeamPanelOpen() {
   return teamPanelOpen;
 }
 
+function createTeamPanelHTML() {
+  const panel = document.getElementById('team-panel');
+  panel.innerHTML = `
+    <div class="corner-tr"></div>
+    <div class="corner-bl"></div>
+    <button id="team-panel-close">&times;</button>
+
+    <div id="team-mascot">
+      <img id="team-mascot-img" src="" alt="Team Mascot">
+      <div id="team-mascot-placeholder">No Mascot</div>
+    </div>
+
+    <div id="team-panel-header">
+      <div id="team-panel-color"></div>
+      <input type="text" id="team-panel-name" value="Team Name">
+    </div>
+
+    <div class="divider-medieval"></div>
+
+    <div class="team-stats">
+      <div class="team-stat">
+        <div class="team-stat-value" id="stat-gold">0</div>
+        <div class="team-stat-label">Total Gold</div>
+      </div>
+      <div class="team-stat">
+        <div class="team-stat-value" id="stat-land">0</div>
+        <div class="team-stat-label">Land</div>
+      </div>
+      <div class="team-stat">
+        <div class="team-stat-value" id="stat-assets">0</div>
+        <div class="team-stat-label">Assets</div>
+      </div>
+    </div>
+
+    <div class="divider-medieval"></div>
+
+    <div class="team-section">
+      <div class="team-section-header">
+        <span class="team-section-title">Players / Students</span>
+        <button class="team-section-add" id="add-player-btn">+ Add Player</button>
+      </div>
+      <div class="player-list" id="player-list"></div>
+    </div>
+  `;
+}
+
 function openTeamPanel() {
   const panel = document.getElementById('team-panel');
   const overlay = document.getElementById('team-panel-overlay');
@@ -39,10 +85,21 @@ function toggleTeamPanel() {
 function updateTeamPanel() {
   const currentTeam = getCurrentTeam();
   const team = GameState.teams[currentTeam];
-  const teamConfig = TEAMS[currentTeam];
+  const panel = document.getElementById('team-panel');
+
+  // Apply team color as CSS custom property
+  panel.style.setProperty('--team-color', team.border);
+  panel.style.setProperty('--team-glow', team.color);
+
+  // Update mascot
+  const mascotImg = document.getElementById('team-mascot-img');
+  const teamNum = currentTeam === 0 ? 10 : currentTeam;
+  mascotImg.src = `../assets/mascots/team${teamNum}.png`;
+  mascotImg.onload = () => mascotImg.classList.add('visible');
+  mascotImg.onerror = () => mascotImg.classList.remove('visible');
 
   // Update header
-  document.getElementById('team-panel-color').style.background = teamConfig.border;
+  document.getElementById('team-panel-color').style.background = team.border;
   document.getElementById('team-panel-name').value = team.name;
 
   // Update stats
@@ -146,6 +203,9 @@ function updateTeamName(name) {
 }
 
 function initTeamPanel() {
+  // Create the panel HTML
+  createTeamPanelHTML();
+
   // Close button
   document.getElementById('team-panel-close').addEventListener('click', closeTeamPanel);
 
@@ -156,7 +216,7 @@ function initTeamPanel() {
   document.getElementById('add-player-btn').addEventListener('click', addPlayer);
 
   // Team name change
-  document.getElementById('team-panel-name').addEventListener('change', (e) => {
+  document.getElementById('team-panel-name').addEventListener('input', (e) => {
     updateTeamName(e.target.value);
   });
 }

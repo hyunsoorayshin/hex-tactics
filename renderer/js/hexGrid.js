@@ -175,7 +175,7 @@ function onHexClick(hex, element) {
       // Assign land to current team
       const teamId = getCurrentTeam();
       GameState.land[hexKey] = teamId;
-      const team = TEAMS[teamId];
+      const team = GameState.teams[teamId];
       element.style.fill = team.color;
       element.style.stroke = team.border;
       console.log(`Land assigned: ${hexKey} -> Team ${teamId}`);
@@ -199,8 +199,8 @@ function onEdgeClick(hex, side, element) {
 // Apply land color to hex element
 function applyLandColor(hexKey, teamId) {
   const element = document.querySelector(`[data-hex="${hexKey}"]`);
-  if (element && TEAMS[teamId]) {
-    const team = TEAMS[teamId];
+  if (element && GameState.teams[teamId]) {
+    const team = GameState.teams[teamId];
     element.style.fill = team.color;
     element.style.stroke = team.border;
   }

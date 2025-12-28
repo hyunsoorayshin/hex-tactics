@@ -32,7 +32,7 @@ function showTownHint() {
     hint = document.createElement('div');
     hint.id = 'town-hint';
     hint.className = 'mode-hint';
-    hint.textContent = 'Click your land to place or remove a town';
+    hint.textContent = 'Click to place town (7 hexes required). Cmd+click to remove.';
     document.body.appendChild(hint);
   }
   hint.classList.add('visible');
@@ -49,41 +49,103 @@ function hideTownHint() {
 // Town Placement Logic
 // ============================================
 
-function onTownModeHexClick(hexKey, element) {
+function canPlaceTown(hexKey, teamId) {
+  // Get center hex and all 6 neighbors
+  const hexes = getHexAndNeighbors(hexKey);
+
+  // Check if all 7 hexes are owned by this team
+  for (const hex of hexes) {
+    const key = hex.toString();
+    if (GameState.land[key] !== teamId) {
+      return { valid: false, reason: 'All 7 hexes must be your land' };
+    }
+  }
+
+  // Check if any of these hexes already have a town or castle
+  for (const hex of hexes) {
+    const key = hex.toString();
+    const obj = GameState.hexObjects[key];
+    if (obj && (obj.type === 'town' || obj.type === 'town-territory' ||
+                obj.type === 'castle' || obj.type === 'castle-territory')) {
+      return { valid: false, reason: 'Cannot overlap with existing town or castle' };
+    }
+  }
+
+  return { valid: true };
+}
+
+function onTownModeHexClick(hexKey, element, metaKey) {
   const currentTeam = getCurrentTeam();
 
-  // Check if town already exists here
-  if (GameState.hexObjects[hexKey]?.type === 'town') {
-    // Remove existing town
-    removeTown(hexKey);
-    showNotification('Town removed');
-  } else {
-    // Check land ownership
-    if (GameState.land[hexKey] !== currentTeam) {
-      showNotification('Must place town on your land', 'error');
-      return;
+  // Check if clicking on existing town
+  const existingObj = GameState.hexObjects[hexKey];
+  if (existingObj?.type === 'town' || existingObj?.type === 'town-territory') {
+    // Cmd+click to remove
+    if (metaKey) {
+      const centerHex = existingObj.type === 'town' ? hexKey : existingObj.centerHex;
+      removeTown(centerHex);
+      showNotification('Town removed');
+    } else {
+      showNotification('Cmd+click to remove town', 'error');
     }
-    // Place new town
-    placeTown(hexKey, currentTeam);
-    showNotification('Town placed!');
+    return;
   }
+
+  // Try to place new town
+  const result = canPlaceTown(hexKey, currentTeam);
+  if (!result.valid) {
+    showNotification(result.reason, 'error');
+    return;
+  }
+
+  placeTown(hexKey, currentTeam);
+  showNotification('Town placed!');
 }
 
 function placeTown(hexKey, teamId) {
+  // Store town in game state (center hex)
   GameState.hexObjects[hexKey] = {
     type: 'town',
-    teamId: teamId
+    teamId: teamId,
+    health: OBJECT_HEALTH.town,
+    maxHealth: OBJECT_HEALTH.town
   };
+
+  // Mark all 6 neighbor hexes as town territory
+  const hexes = getHexAndNeighbors(hexKey);
+  for (const hex of hexes) {
+    const key = hex.toString();
+    if (key !== hexKey) {
+      GameState.hexObjects[key] = {
+        type: 'town-territory',
+        teamId: teamId,
+        centerHex: hexKey
+      };
+    }
+  }
 
   console.log(`Placed town for team ${teamId} at ${hexKey}`);
   renderTowns();
 }
 
 function removeTown(hexKey) {
-  if (GameState.hexObjects[hexKey]?.type === 'town') {
-    delete GameState.hexObjects[hexKey];
-    renderTowns();
+  const obj = GameState.hexObjects[hexKey];
+  if (!obj) return;
+
+  // If this is the center, remove the town and all territory
+  if (obj.type === 'town') {
+    const hexes = getHexAndNeighbors(hexKey);
+    for (const hex of hexes) {
+      delete GameState.hexObjects[hex.toString()];
+    }
   }
+  // If this is territory, find and remove the whole town
+  else if (obj.type === 'town-territory') {
+    removeTown(obj.centerHex);
+    return;
+  }
+
+  renderTowns();
 }
 
 // ============================================
@@ -95,7 +157,7 @@ function renderTowns() {
   document.querySelectorAll('.town-marker').forEach(m => m.remove());
   document.querySelectorAll('[id^="town-outline-"]').forEach(f => f.remove());
 
-  // Find all towns
+  // Find all towns (center hexes only)
   for (const [hexKey, obj] of Object.entries(GameState.hexObjects)) {
     if (obj.type === 'town') {
       addTownMarker(hexKey, obj.teamId);
@@ -115,7 +177,7 @@ function addTownMarker(hexKey, teamId) {
   const centerX = bbox.x + bbox.width / 2;
   const centerY = bbox.y + bbox.height / 2;
 
-  const iconSize = 48;
+  const iconSize = 64;
 
   const svg = document.getElementById('hex-overlay');
 
@@ -125,11 +187,35 @@ function addTownMarker(hexKey, teamId) {
   marker.setAttribute('data-hex', hexKey);
   marker.setAttribute('data-team', teamId);
 
-  // Left-click to remove
+  // Click handler - delegate to appropriate mode
   marker.addEventListener('click', (e) => {
     e.stopPropagation();
-    removeTown(hexKey);
-    showNotification('Town removed');
+    const metaKey = e.metaKey || e.ctrlKey;
+
+    // Delegate to other modes if active
+    if (isBattleMode()) {
+      onBattleModeHexClick(hexKey, null, e.shiftKey);
+      return;
+    }
+    if (isMoveMode()) {
+      onMoveModeHexClick(hexKey, null, e.shiftKey);
+      return;
+    }
+    if (isCastleMode()) {
+      // Delegate to castle mode for upgrade
+      onCastleModeHexClick(hexKey, null, metaKey);
+      return;
+    }
+
+    // Town mode: Cmd+click to remove
+    if (isTownMode()) {
+      if (metaKey) {
+        removeTown(hexKey);
+        showNotification('Town removed');
+      } else {
+        showNotification('Cmd+click to remove town', 'error');
+      }
+    }
   });
 
   // Create SVG filter for team color outline

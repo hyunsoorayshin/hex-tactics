@@ -70,7 +70,36 @@ window.addEventListener('keydown', (e) => {
       return;
     }
     if (isShipMode()) {
+      // If in ship interaction mode, cancel it first
+      if (getShipInteractionMode()) {
+        clearShipInteraction();
+        renderShips();
+        showNotification('Cancelled');
+        return;
+      }
       toggleShipMode();
+      updateStatus();
+      return;
+    }
+    if (isBattleMode()) {
+      // If in target selection phase, cancel it first
+      if (getBattlePhase() === 'select_target') {
+        clearBattleSelection();
+        showNotification('Cancelled');
+        return;
+      }
+      toggleBattleMode();
+      updateStatus();
+      return;
+    }
+    if (isMoveMode()) {
+      // If in destination selection phase, cancel it first
+      if (getMovePhase() === 'select_destination') {
+        clearMoveSelection();
+        showNotification('Cancelled');
+        return;
+      }
+      toggleMoveMode();
       updateStatus();
       return;
     }
@@ -92,6 +121,8 @@ window.addEventListener('keydown', (e) => {
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isBattleMode()) toggleBattleMode();
+    if (isMoveMode()) toggleMoveMode();
     toggleLandMode();
     updateStatus();
     console.log('Land mode:', isLandMode() ? 'ON' : 'OFF');
@@ -106,6 +137,8 @@ window.addEventListener('keydown', (e) => {
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isBattleMode()) toggleBattleMode();
+    if (isMoveMode()) toggleMoveMode();
     togglePlayerMode();
     updateStatus();
     console.log('Player mode:', isPlayerMode() ? 'ON' : 'OFF');
@@ -120,6 +153,8 @@ window.addEventListener('keydown', (e) => {
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isBattleMode()) toggleBattleMode();
+    if (isMoveMode()) toggleMoveMode();
     toggleCastleMode();
     updateStatus();
     console.log('Castle mode:', isCastleMode() ? 'ON' : 'OFF');
@@ -134,6 +169,8 @@ window.addEventListener('keydown', (e) => {
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isBattleMode()) toggleBattleMode();
+    if (isMoveMode()) toggleMoveMode();
     toggleBridgeMode();
     updateStatus();
     console.log('Bridge mode:', isBridgeMode() ? 'ON' : 'OFF');
@@ -148,6 +185,8 @@ window.addEventListener('keydown', (e) => {
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isBattleMode()) toggleBattleMode();
+    if (isMoveMode()) toggleMoveMode();
     toggleArmyMode();
     updateStatus();
     console.log('Army mode:', isArmyMode() ? 'ON' : 'OFF');
@@ -162,6 +201,8 @@ window.addEventListener('keydown', (e) => {
     if (isArmyMode()) toggleArmyMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isBattleMode()) toggleBattleMode();
+    if (isMoveMode()) toggleMoveMode();
     toggleTownMode();
     updateStatus();
     console.log('Town mode:', isTownMode() ? 'ON' : 'OFF');
@@ -176,6 +217,8 @@ window.addEventListener('keydown', (e) => {
     if (isArmyMode()) toggleArmyMode();
     if (isTownMode()) toggleTownMode();
     if (isShipMode()) toggleShipMode();
+    if (isBattleMode()) toggleBattleMode();
+    if (isMoveMode()) toggleMoveMode();
     toggleWallMode();
     updateStatus();
     console.log('Wall mode:', isWallMode() ? 'ON' : 'OFF');
@@ -190,9 +233,43 @@ window.addEventListener('keydown', (e) => {
     if (isArmyMode()) toggleArmyMode();
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
+    if (isBattleMode()) toggleBattleMode();
+    if (isMoveMode()) toggleMoveMode();
     toggleShipMode();
     updateStatus();
     console.log('Ship mode:', isShipMode() ? 'ON' : 'OFF');
+  }
+
+  // X - toggle battle mode
+  if (e.key === 'x' || e.key === 'X') {
+    if (isLandMode()) toggleLandMode();
+    if (isPlayerMode()) togglePlayerMode();
+    if (isCastleMode()) toggleCastleMode();
+    if (isBridgeMode()) toggleBridgeMode();
+    if (isArmyMode()) toggleArmyMode();
+    if (isTownMode()) toggleTownMode();
+    if (isWallMode()) toggleWallMode();
+    if (isShipMode()) toggleShipMode();
+    if (isMoveMode()) toggleMoveMode();
+    toggleBattleMode();
+    updateStatus();
+    console.log('Battle mode:', isBattleMode() ? 'ON' : 'OFF');
+  }
+
+  // M - toggle move mode
+  if (e.key === 'm' || e.key === 'M') {
+    if (isLandMode()) toggleLandMode();
+    if (isPlayerMode()) togglePlayerMode();
+    if (isCastleMode()) toggleCastleMode();
+    if (isBridgeMode()) toggleBridgeMode();
+    if (isArmyMode()) toggleArmyMode();
+    if (isTownMode()) toggleTownMode();
+    if (isWallMode()) toggleWallMode();
+    if (isShipMode()) toggleShipMode();
+    if (isBattleMode()) toggleBattleMode();
+    toggleMoveMode();
+    updateStatus();
+    console.log('Move mode:', isMoveMode() ? 'ON' : 'OFF');
   }
 
   // Shift + 1-0 - select team

@@ -16,6 +16,17 @@ const RANKS = [
   { min: 10000, max: Infinity, name: 'King', icon: 'king.png' }
 ];
 
+// Combat stats by rank
+const RANK_STATS = {
+  'Peasant': { health: 20, attack: 5 },
+  'Farmer': { health: 30, attack: 10 },
+  'Merchant': { health: 40, attack: 15 },
+  'Knight': { health: 60, attack: 30 },
+  'Grand Knight': { health: 80, attack: 45 },
+  'Baron': { health: 100, attack: 60 },
+  'King': { health: 150, attack: 80 }
+};
+
 function getPlayerRank(gold) {
   for (const rank of RANKS) {
     if (gold >= rank.min && gold <= rank.max) {
@@ -23,6 +34,12 @@ function getPlayerRank(gold) {
     }
   }
   return RANKS[0];
+}
+
+// Get player combat stats based on gold
+function getPlayerStats(gold) {
+  const rank = getPlayerRank(gold);
+  return RANK_STATS[rank.name] || RANK_STATS['Peasant'];
 }
 
 function isPlayerMode() {
@@ -111,13 +128,17 @@ function updatePlayerPanel() {
     return;
   }
 
-  listEl.innerHTML = players.map(([playerId, player]) => `
-    <div class="player-panel-item ${selectedPlayerId === playerId ? 'selected' : ''}"
-         data-player-id="${playerId}">
-      <span class="player-panel-name">${player.name}</span>
-      <span class="player-panel-pos">${player.position ? player.position : 'Not placed'}</span>
-    </div>
-  `).join('');
+  listEl.innerHTML = players.map(([playerId, player]) => {
+    const isDead = player.isDead || player.health === 0;
+    const statusText = isDead ? '💀 Dead' : (player.position ? player.position : 'Not placed');
+    return `
+      <div class="player-panel-item ${selectedPlayerId === playerId ? 'selected' : ''} ${isDead ? 'dead' : ''}"
+           data-player-id="${playerId}">
+        <span class="player-panel-name">${player.name}</span>
+        <span class="player-panel-pos">${statusText}</span>
+      </div>
+    `;
+  }).join('');
 
   // Attach click listeners
   players.forEach(([playerId]) => {
@@ -139,13 +160,42 @@ function onPlayerModeHexClick(hexKey, element) {
   }
 
   const currentTeam = getCurrentTeam();
+  const player = GameState.teams[currentTeam]?.players[selectedPlayerId];
 
-  // Place the selected player on this hex
-  GameState.setPlayerPosition(currentTeam, selectedPlayerId, hexKey);
-  console.log(`Placed player ${selectedPlayerId} at ${hexKey}`);
+  if (!player) return;
+
+  // Check if player is dead - can only revive at own town or castle
+  const isDead = player.isDead || player.health === 0;
+
+  if (isDead) {
+    // Check if clicking on a town or castle owned by this team
+    const hexObj = GameState.hexObjects[hexKey];
+    const isOwnTown = hexObj?.type === 'town' && hexObj.teamId === currentTeam;
+    const isOwnCastle = hexObj?.type === 'castle' && hexObj.teamId === currentTeam;
+
+    if (!isOwnTown && !isOwnCastle) {
+      showNotification('Dead players can only revive at your town or castle', 'error');
+      return;
+    }
+
+    // Revive the player
+    const stats = getPlayerStats(player.gold);
+    player.health = stats.health;
+    player.maxHealth = stats.health;
+    player.isDead = false;
+    player.position = hexKey;
+    player.revives = (player.revives || 0) + 1;  // Track revive
+
+    showNotification(`${player.name} revived at ${hexObj.type}!`);
+  } else {
+    // Normal placement for living players
+    GameState.setPlayerPosition(currentTeam, selectedPlayerId, hexKey);
+    console.log(`Placed player ${selectedPlayerId} at ${hexKey}`);
+  }
 
   // Update visuals
   renderPlayerMarkers();
+  renderAllHealthBars();
   updatePlayerPanel();
 }
 

@@ -32,7 +32,7 @@ function showBridgeHint() {
     hint = document.createElement('div');
     hint.id = 'bridge-hint';
     hint.className = 'mode-hint';
-    hint.textContent = 'Click a hex to place or remove a bridge';
+    hint.textContent = 'Click to place bridge. Right-click to rotate. Cmd+click to remove.';
     document.body.appendChild(hint);
   }
   hint.classList.add('visible');
@@ -49,14 +49,18 @@ function hideBridgeHint() {
 // Bridge Placement Logic
 // ============================================
 
-function onBridgeModeHexClick(hexKey, element) {
+function onBridgeModeHexClick(hexKey, element, metaKey) {
   const currentTeam = getCurrentTeam();
 
   // Check if bridge already exists here
   if (GameState.hexObjects[hexKey]?.type === 'bridge') {
-    // Remove existing bridge
-    removeBridge(hexKey);
-    showNotification('Bridge removed');
+    // Cmd+click to remove
+    if (metaKey) {
+      removeBridge(hexKey);
+      showNotification('Bridge removed');
+    } else {
+      showNotification('Cmd+click to remove. Right-click to rotate.', 'error');
+    }
   } else {
     // Place new bridge
     placeBridge(hexKey, currentTeam);
@@ -68,7 +72,9 @@ function placeBridge(hexKey, teamId) {
   GameState.hexObjects[hexKey] = {
     type: 'bridge',
     teamId: teamId,
-    rotation: 0  // 0, 60, or 120 degrees (side-to-side orientations)
+    rotation: 0,  // 0, 60, or 120 degrees (side-to-side orientations)
+    health: OBJECT_HEALTH.bridge,
+    maxHealth: OBJECT_HEALTH.bridge
   };
 
   console.log(`Placed bridge for team ${teamId} at ${hexKey}`);
@@ -132,11 +138,30 @@ function addBridgeMarker(hexKey, teamId, rotation) {
   marker.setAttribute('data-hex', hexKey);
   marker.setAttribute('data-team', teamId);
 
-  // Left-click to remove
+  // Click handler - delegate to appropriate mode
   marker.addEventListener('click', (e) => {
     e.stopPropagation();
-    removeBridge(hexKey);
-    showNotification('Bridge removed');
+    const metaKey = e.metaKey || e.ctrlKey;
+
+    // Delegate to other modes if active
+    if (isBattleMode()) {
+      onBattleModeHexClick(hexKey, null, e.shiftKey);
+      return;
+    }
+    if (isMoveMode()) {
+      onMoveModeHexClick(hexKey, null, e.shiftKey);
+      return;
+    }
+
+    // Bridge mode: Cmd+click to remove
+    if (isBridgeMode()) {
+      if (metaKey) {
+        removeBridge(hexKey);
+        showNotification('Bridge removed');
+      } else {
+        showNotification('Cmd+click to remove. Right-click to rotate.', 'error');
+      }
+    }
   });
 
   // Right-click to rotate

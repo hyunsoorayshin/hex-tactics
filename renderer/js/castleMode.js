@@ -31,8 +31,8 @@ function showCastleHint() {
   if (!hint) {
     hint = document.createElement('div');
     hint.id = 'castle-hint';
-    hint.className = 'castle-hint';
-    hint.textContent = 'Click a hex to place castle (requires 7 hexes of your land)';
+    hint.className = 'mode-hint';
+    hint.textContent = 'Click town to upgrade (19 hexes required). Cmd+click to remove.';
     document.body.appendChild(hint);
   }
   hint.classList.add('visible');
@@ -46,72 +46,181 @@ function hideCastleHint() {
 }
 
 // ============================================
+// Hex Ring Calculations
+// ============================================
+
+// Get the outer ring of 12 hexes (2 steps away from center)
+function getOuterRing(hexKey) {
+  const [q, r] = hexKey.split(',').map(Number);
+  const outerHexes = [];
+
+  // Outer ring: hexes that are 2 steps away
+  // Starting from top-right, going clockwise
+  const outerOffsets = [
+    // Top section (3 hexes)
+    [0, -2], [1, -2], [2, -2],
+    // Right-top (2 hexes)
+    [2, -1], [2, 0],
+    // Right-bottom (2 hexes)
+    [1, 1], [0, 2],
+    // Bottom section (3 hexes - but overlaps, so adjusted)
+    [-1, 2], [-2, 2],
+    // Left-bottom (2 hexes)
+    [-2, 1], [-2, 0],
+    // Left-top (2 hexes)
+    [-1, -1]
+  ];
+
+  // For pointy-top hex, the outer ring at distance 2 has 12 hexes
+  // Using axial coordinate system
+  for (let i = 0; i < 6; i++) {
+    // Direction vectors for hex
+    const directions = [
+      [1, 0], [1, -1], [0, -1],
+      [-1, 0], [-1, 1], [0, 1]
+    ];
+
+    // Get the hex 2 steps in direction i
+    const dq = directions[i][0] * 2;
+    const dr = directions[i][1] * 2;
+    outerHexes.push(new Hex(q + dq, r + dr));
+
+    // Get the hex between direction i and i+1 (at distance 2)
+    const nextI = (i + 1) % 6;
+    const midQ = directions[i][0] + directions[nextI][0];
+    const midR = directions[i][1] + directions[nextI][1];
+    outerHexes.push(new Hex(q + midQ, r + midR));
+  }
+
+  return outerHexes;
+}
+
+// Get all 19 hexes for a castle (center + inner 6 + outer 12)
+function getCastleHexes(hexKey) {
+  const innerHexes = getHexAndNeighbors(hexKey); // 7 hexes (center + 6)
+  const outerHexes = getOuterRing(hexKey); // 12 hexes
+  return { inner: innerHexes, outer: outerHexes, all: [...innerHexes, ...outerHexes] };
+}
+
+// ============================================
 // Castle Placement Logic
 // ============================================
 
 function canPlaceCastle(hexKey, teamId) {
-  // Get center hex and all 6 neighbors
-  const hexes = getHexAndNeighbors(hexKey);
+  // Check if there's a town at this hex
+  const centerObj = GameState.hexObjects[hexKey];
+  if (!centerObj || centerObj.type !== 'town') {
+    return { valid: false, reason: 'Must upgrade from an existing town' };
+  }
 
-  // Check if all 7 hexes are owned by this team
-  for (const hex of hexes) {
+  // Check if town belongs to this team
+  if (centerObj.teamId !== teamId) {
+    return { valid: false, reason: 'Can only upgrade your own town' };
+  }
+
+  // Get all 19 hexes needed
+  const { inner, outer, all } = getCastleHexes(hexKey);
+
+  // Check if all 19 hexes are owned by this team
+  for (const hex of all) {
     const key = hex.toString();
     if (GameState.land[key] !== teamId) {
-      return { valid: false, reason: 'All 7 hexes must be your land' };
+      return { valid: false, reason: 'All 19 hexes must be your land' };
     }
   }
 
-  // Check if any of these hexes already have a castle
-  for (const hex of hexes) {
+  // Check if outer ring hexes are free (inner ring is town territory, that's ok)
+  for (const hex of outer) {
     const key = hex.toString();
     const obj = GameState.hexObjects[key];
-    if (obj && obj.type === 'castle') {
-      return { valid: false, reason: 'Cannot overlap with existing castle' };
+    if (obj && obj.type !== 'town-territory' && obj.centerHex !== hexKey) {
+      // Allow town-territory that belongs to this town
+      if (obj.type === 'castle' || obj.type === 'castle-territory' ||
+          obj.type === 'town' || obj.type === 'town-territory') {
+        return { valid: false, reason: 'Cannot overlap with other structures' };
+      }
     }
   }
 
   return { valid: true };
 }
 
-function onCastleModeHexClick(hexKey, element) {
+function onCastleModeHexClick(hexKey, element, metaKey) {
   const currentTeam = getCurrentTeam();
-  const result = canPlaceCastle(hexKey, currentTeam);
 
+  // Check if clicking on existing castle
+  const existingObj = GameState.hexObjects[hexKey];
+  if (existingObj?.type === 'castle' || existingObj?.type === 'castle-territory') {
+    // Cmd+click to remove
+    if (metaKey) {
+      const centerHex = existingObj.type === 'castle' ? hexKey : existingObj.centerHex;
+      removeCastle(centerHex);
+      showNotification('Castle removed');
+    } else {
+      showNotification('Cmd+click to remove castle', 'error');
+    }
+    return;
+  }
+
+  // Try to place castle (upgrade from town)
+  const result = canPlaceCastle(hexKey, currentTeam);
   if (!result.valid) {
     showNotification(result.reason, 'error');
     return;
   }
 
-  // Place the castle
   placeCastle(hexKey, currentTeam);
-  showNotification('Castle placed!');
+  showNotification('Town upgraded to Castle!');
 }
 
 function placeCastle(hexKey, teamId) {
+  // Get all hexes
+  const { inner, outer } = getCastleHexes(hexKey);
+
+  // Remove existing town and its territory first
+  for (const hex of inner) {
+    const key = hex.toString();
+    if (GameState.hexObjects[key]?.type === 'town' ||
+        GameState.hexObjects[key]?.type === 'town-territory') {
+      delete GameState.hexObjects[key];
+    }
+  }
+
   // Store castle in game state (center hex)
   GameState.hexObjects[hexKey] = {
     type: 'castle',
     teamId: teamId,
-    data: {}
+    health: OBJECT_HEALTH.castle,
+    maxHealth: OBJECT_HEALTH.castle
   };
 
-  // Mark all 7 hexes as part of this castle
-  const hexes = getHexAndNeighbors(hexKey);
-  for (const hex of hexes) {
+  // Mark inner ring (6 hexes) as castle territory
+  for (const hex of inner) {
     const key = hex.toString();
     if (key !== hexKey) {
       GameState.hexObjects[key] = {
         type: 'castle-territory',
         teamId: teamId,
-        centerHex: hexKey
+        centerHex: hexKey,
+        ring: 'inner'
       };
     }
   }
 
-  console.log(`Placed castle for team ${teamId} at ${hexKey}`);
+  // Mark outer ring (12 hexes) as castle territory
+  for (const hex of outer) {
+    const key = hex.toString();
+    GameState.hexObjects[key] = {
+      type: 'castle-territory',
+      teamId: teamId,
+      centerHex: hexKey,
+      ring: 'outer'
+    };
+  }
 
-  // Render the castle
+  console.log(`Placed castle for team ${teamId} at ${hexKey}`);
   renderCastles();
+  renderTowns(); // Re-render towns to remove the upgraded one
 }
 
 function removeCastle(hexKey) {
@@ -120,14 +229,15 @@ function removeCastle(hexKey) {
 
   // If this is the center, remove the castle and all territory
   if (obj.type === 'castle') {
-    const hexes = getHexAndNeighbors(hexKey);
-    for (const hex of hexes) {
+    const { all } = getCastleHexes(hexKey);
+    for (const hex of all) {
       delete GameState.hexObjects[hex.toString()];
     }
   }
   // If this is territory, find and remove the whole castle
   else if (obj.type === 'castle-territory') {
     removeCastle(obj.centerHex);
+    return;
   }
 
   renderCastles();
@@ -163,7 +273,7 @@ function addCastleMarker(hexKey, teamId) {
   const centerY = bbox.y + bbox.height / 2;
 
   // Castle icon size (spans multiple hexes, so larger)
-  const iconSize = 80;
+  const iconSize = 100;
   const iconX = centerX - iconSize / 2;
   const iconY = centerY - iconSize / 2;
 
@@ -173,11 +283,30 @@ function addCastleMarker(hexKey, teamId) {
   marker.setAttribute('data-hex', hexKey);
   marker.setAttribute('data-team', teamId);
 
-  // Click to remove
+  // Click handler - delegate to appropriate mode
   marker.addEventListener('click', (e) => {
     e.stopPropagation();
-    removeCastle(hexKey);
-    showNotification('Castle removed');
+    const metaKey = e.metaKey || e.ctrlKey;
+
+    // Delegate to other modes if active
+    if (isBattleMode()) {
+      onBattleModeHexClick(hexKey, null, e.shiftKey);
+      return;
+    }
+    if (isMoveMode()) {
+      onMoveModeHexClick(hexKey, null, e.shiftKey);
+      return;
+    }
+
+    // Castle mode: Cmd+click to remove
+    if (isCastleMode()) {
+      if (metaKey) {
+        removeCastle(hexKey);
+        showNotification('Castle removed');
+      } else {
+        showNotification('Cmd+click to remove castle', 'error');
+      }
+    }
   });
 
   // Create SVG filter for team color outline

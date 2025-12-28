@@ -4,6 +4,13 @@
 
 let teamPanelOpen = false;
 
+// Get total kills for a team (sum of all player kills)
+function getTeamKills(teamId) {
+  const team = GameState.teams[teamId];
+  if (!team || !team.players) return 0;
+  return Object.values(team.players).reduce((sum, p) => sum + (p.kills || 0), 0);
+}
+
 // Count specific asset types for a team
 function getTeamAssetCounts(teamId) {
   const counts = {
@@ -68,6 +75,17 @@ function createTeamPanelHTML() {
         <div class="team-stat">
           <div class="team-stat-value" id="stat-land">0</div>
           <div class="team-stat-label">Land</div>
+        </div>
+      </div>
+
+      <div class="team-stats team-stats-2col">
+        <div class="team-stat">
+          <div class="team-stat-value" id="stat-kills">0</div>
+          <div class="team-stat-label">Total Kills</div>
+        </div>
+        <div class="team-stat">
+          <div class="team-stat-value" id="stat-objects-lost">0</div>
+          <div class="team-stat-label">Objects Lost</div>
         </div>
       </div>
 
@@ -175,6 +193,8 @@ function updateTeamPanel() {
   // Update stats
   document.getElementById('stat-gold').textContent = GameState.getTeamGold(currentTeam);
   document.getElementById('stat-land').textContent = GameState.getTeamLandCount(currentTeam);
+  document.getElementById('stat-kills').textContent = getTeamKills(currentTeam);
+  document.getElementById('stat-objects-lost').textContent = team.objectsLost || 0;
 
   // Update asset counts
   const assetCounts = getTeamAssetCounts(currentTeam);
@@ -206,6 +226,11 @@ function renderPlayerList() {
       <div class="player-gold">
         <span class="player-gold-icon">&#9733;</span>
         <input type="number" class="player-gold-input" value="${player.gold}" min="0">
+      </div>
+      <div class="player-stats-row">
+        <span class="player-stat-badge kills" title="Kills">${player.kills || 0}K</span>
+        <span class="player-stat-badge deaths" title="Deaths">${player.deaths || 0}D</span>
+        <span class="player-stat-badge revives" title="Revives">${player.revives || 0}R</span>
       </div>
       <button class="player-remove">&times;</button>
     </div>

@@ -141,7 +141,7 @@ function generateHexGrid() {
       polygon.addEventListener('click', (e) => {
         if (!isSpacePressed()) {
           e.stopPropagation();
-          onHexClick(hex, polygon);
+          onHexClick(hex, polygon, e.shiftKey, e.metaKey || e.ctrlKey);
         }
       });
 
@@ -166,7 +166,7 @@ function generateHexGrid() {
         edge.addEventListener('click', (e) => {
           if (!isSpacePressed()) {
             e.stopPropagation();
-            onEdgeClick(hex, side, edge);
+            onEdgeClick(hex, side, edge, e.metaKey || e.ctrlKey);
           }
         });
 
@@ -177,7 +177,7 @@ function generateHexGrid() {
 }
 
 // Hex click handler
-function onHexClick(hex, element) {
+function onHexClick(hex, element, shiftKey, metaKey) {
   const hexKey = hex.toString();
 
   if (isLandMode()) {
@@ -188,19 +188,25 @@ function onHexClick(hex, element) {
     onPlayerModeHexClick(hexKey, element);
   } else if (isCastleMode()) {
     // Delegate to castle mode module
-    onCastleModeHexClick(hexKey, element);
+    onCastleModeHexClick(hexKey, element, metaKey);
   } else if (isBridgeMode()) {
     // Delegate to bridge mode module
-    onBridgeModeHexClick(hexKey, element);
+    onBridgeModeHexClick(hexKey, element, metaKey);
   } else if (isArmyMode()) {
     // Delegate to army mode module
-    onArmyModeHexClick(hexKey, element);
+    onArmyModeHexClick(hexKey, element, metaKey);
   } else if (isTownMode()) {
     // Delegate to town mode module
-    onTownModeHexClick(hexKey, element);
+    onTownModeHexClick(hexKey, element, metaKey);
   } else if (isShipMode()) {
-    // Delegate to ship mode module
-    onShipModeHexClick(hexKey, element);
+    // Delegate to ship mode module (pass shiftKey for boarding/disembarking)
+    onShipModeHexClick(hexKey, element, shiftKey, metaKey);
+  } else if (isBattleMode()) {
+    // Delegate to battle mode module
+    onBattleModeHexClick(hexKey, element, shiftKey);
+  } else if (isMoveMode()) {
+    // Delegate to move mode module
+    onMoveModeHexClick(hexKey, element, shiftKey);
   } else {
     // Default: toggle selection
     element.classList.toggle('selected');
@@ -209,11 +215,11 @@ function onHexClick(hex, element) {
 }
 
 // Edge click handler
-function onEdgeClick(hex, side, element) {
+function onEdgeClick(hex, side, element, metaKey) {
   const edgeKey = `${hex.toString()},${side}`;
 
   if (isWallMode()) {
-    onWallModeEdgeClick(edgeKey, element);
+    onWallModeEdgeClick(edgeKey, element, metaKey);
   } else {
     // Default: toggle selection
     element.classList.toggle('selected');

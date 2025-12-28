@@ -32,7 +32,7 @@ function showWallHint() {
     hint = document.createElement('div');
     hint.id = 'wall-hint';
     hint.className = 'mode-hint';
-    hint.textContent = 'Click an edge to place or remove a wall';
+    hint.textContent = 'Click edge to place wall. Cmd+click to remove.';
     document.body.appendChild(hint);
   }
   hint.classList.add('visible');
@@ -49,14 +49,18 @@ function hideWallHint() {
 // Wall Placement Logic
 // ============================================
 
-function onWallModeEdgeClick(edgeKey, element) {
+function onWallModeEdgeClick(edgeKey, element, metaKey) {
   const currentTeam = getCurrentTeam();
 
   // Check if wall already exists here
   if (GameState.edgeObjects[edgeKey]?.type === 'wall') {
-    // Remove existing wall
-    removeWall(edgeKey);
-    showNotification('Wall removed');
+    // Cmd+click to remove
+    if (metaKey) {
+      removeWall(edgeKey);
+      showNotification('Wall removed');
+    } else {
+      showNotification('Cmd+click to remove wall', 'error');
+    }
   } else {
     // Place new wall
     placeWall(edgeKey, currentTeam);
@@ -67,7 +71,9 @@ function onWallModeEdgeClick(edgeKey, element) {
 function placeWall(edgeKey, teamId) {
   GameState.edgeObjects[edgeKey] = {
     type: 'wall',
-    teamId: teamId
+    teamId: teamId,
+    health: OBJECT_HEALTH.wall,
+    maxHealth: OBJECT_HEALTH.wall
   };
 
   console.log(`Placed wall for team ${teamId} at edge ${edgeKey}`);
@@ -126,11 +132,29 @@ function addWallMarker(edgeKey, teamId) {
   marker.setAttribute('data-edge', edgeKey);
   marker.setAttribute('data-team', teamId);
 
-  // Click to remove
+  // Click handler - delegate to appropriate mode
   marker.addEventListener('click', (e) => {
     e.stopPropagation();
-    removeWall(edgeKey);
-    showNotification('Wall removed');
+    const metaKey = e.metaKey || e.ctrlKey;
+
+    // Delegate to battle mode if active (walls can be attacked)
+    if (isBattleMode()) {
+      // Parse edge key to get hex for battle mode
+      const parts = edgeKey.split(',');
+      const hexKey = `${parts[0]},${parts[1]}`;
+      onBattleModeHexClick(hexKey, null, e.shiftKey);
+      return;
+    }
+
+    // Wall mode: Cmd+click to remove
+    if (isWallMode()) {
+      if (metaKey) {
+        removeWall(edgeKey);
+        showNotification('Wall removed');
+      } else {
+        showNotification('Cmd+click to remove wall', 'error');
+      }
+    }
   });
 
   // Create SVG filter for team color outline

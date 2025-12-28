@@ -21,6 +21,8 @@ function updateStatus() {
   const townModeActive = isTownMode();
   const wallModeActive = isWallMode();
   const shipModeActive = isShipMode();
+  const battleModeActive = isBattleMode();
+  const moveModeActive = isMoveMode();
 
   let modeText = 'SELECT';
   if (landModeActive) modeText = 'LAND';
@@ -31,14 +33,20 @@ function updateStatus() {
   if (townModeActive) modeText = 'TOWN';
   if (wallModeActive) modeText = 'WALL';
   if (shipModeActive) modeText = 'SHIP';
+  if (battleModeActive) modeText = 'BATTLE';
+  if (moveModeActive) modeText = 'MOVE';
+
+  const anyModeActive = landModeActive || playerModeActive || castleModeActive || bridgeModeActive ||
+                        armyModeActive || townModeActive || wallModeActive || shipModeActive ||
+                        battleModeActive || moveModeActive;
 
   status.innerHTML = `
     <span class="team-indicator" style="background: ${teamInfo.border}"></span>
     <span>Team ${currentTeam === 0 ? 10 : currentTeam}</span>
     <span class="divider">|</span>
-    <span class="mode ${(landModeActive || playerModeActive || castleModeActive || bridgeModeActive || armyModeActive || townModeActive || wallModeActive || shipModeActive) ? 'active' : ''}">${modeText}</span>
+    <span class="mode ${anyModeActive ? 'active' : ''}">${modeText}</span>
     <span class="divider">|</span>
-    <span class="hint">L: Land | C: Castle | B: Bridge | A: Army | T: Town | W: Wall | S: Ship</span>
+    <span class="hint">L: Land | C: Castle | B: Bridge | A: Army | T: Town | W: Wall | S: Ship | X: Battle | M: Move</span>
   `;
 }
 

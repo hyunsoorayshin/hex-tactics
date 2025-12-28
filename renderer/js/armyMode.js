@@ -32,7 +32,7 @@ function showArmyHint() {
     hint = document.createElement('div');
     hint.id = 'army-hint';
     hint.className = 'mode-hint';
-    hint.textContent = 'Click your land to place or remove an army';
+    hint.textContent = 'Click your land to place army. Cmd+click to remove.';
     document.body.appendChild(hint);
   }
   hint.classList.add('visible');
@@ -49,14 +49,18 @@ function hideArmyHint() {
 // Army Placement Logic
 // ============================================
 
-function onArmyModeHexClick(hexKey, element) {
+function onArmyModeHexClick(hexKey, element, metaKey) {
   const currentTeam = getCurrentTeam();
 
   // Check if army already exists here
   if (GameState.hexObjects[hexKey]?.type === 'army') {
-    // Remove existing army
-    removeArmy(hexKey);
-    showNotification('Army removed');
+    // Cmd+click to remove
+    if (metaKey) {
+      removeArmy(hexKey);
+      showNotification('Army removed');
+    } else {
+      showNotification('Cmd+click to remove army', 'error');
+    }
   } else {
     // Check land ownership
     if (GameState.land[hexKey] !== currentTeam) {
@@ -72,7 +76,9 @@ function onArmyModeHexClick(hexKey, element) {
 function placeArmy(hexKey, teamId) {
   GameState.hexObjects[hexKey] = {
     type: 'army',
-    teamId: teamId
+    teamId: teamId,
+    health: OBJECT_HEALTH.army,
+    maxHealth: OBJECT_HEALTH.army
   };
 
   console.log(`Placed army for team ${teamId} at ${hexKey}`);
@@ -125,11 +131,30 @@ function addArmyMarker(hexKey, teamId) {
   marker.setAttribute('data-hex', hexKey);
   marker.setAttribute('data-team', teamId);
 
-  // Left-click to remove
+  // Click handler - delegate to appropriate mode
   marker.addEventListener('click', (e) => {
     e.stopPropagation();
-    removeArmy(hexKey);
-    showNotification('Army removed');
+    const metaKey = e.metaKey || e.ctrlKey;
+
+    // Delegate to other modes if active
+    if (isBattleMode()) {
+      onBattleModeHexClick(hexKey, null, e.shiftKey);
+      return;
+    }
+    if (isMoveMode()) {
+      onMoveModeHexClick(hexKey, null, e.shiftKey);
+      return;
+    }
+
+    // Army mode: Cmd+click to remove
+    if (isArmyMode()) {
+      if (metaKey) {
+        removeArmy(hexKey);
+        showNotification('Army removed');
+      } else {
+        showNotification('Cmd+click to remove army', 'error');
+      }
+    }
   });
 
   // Create SVG filter for team color outline

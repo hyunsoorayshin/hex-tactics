@@ -689,6 +689,39 @@ html, body {
   background: rgba(212, 175, 55, 0.2);
 }
 
+.player-stats-row {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.player-stat-badge {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  min-width: 24px;
+  text-align: center;
+}
+
+.player-stat-badge.kills {
+  background: rgba(220, 50, 50, 0.3);
+  color: #ff6b6b;
+  border: 1px solid rgba(220, 50, 50, 0.5);
+}
+
+.player-stat-badge.deaths {
+  background: rgba(100, 100, 100, 0.3);
+  color: #aaa;
+  border: 1px solid rgba(100, 100, 100, 0.5);
+}
+
+.player-stat-badge.revives {
+  background: rgba(50, 180, 50, 0.3);
+  color: #6bff6b;
+  border: 1px solid rgba(50, 180, 50, 0.5);
+}
+
 .player-remove {
   background: none;
   border: none;
@@ -831,6 +864,35 @@ html, body {
   text-align: center;
 }
 
+/* Dead player styles */
+.player-panel-item.dead {
+  background: rgba(60, 30, 30, 0.5);
+  border-color: var(--error);
+  opacity: 0.7;
+}
+
+.player-panel-item.dead:hover {
+  background: rgba(80, 40, 40, 0.5);
+  border-color: #c05050;
+  opacity: 1;
+}
+
+.player-panel-item.dead.selected {
+  background: rgba(100, 50, 50, 0.5);
+  border-color: #ff6060;
+  box-shadow: 0 0 8px rgba(255, 80, 80, 0.3);
+  opacity: 1;
+}
+
+.player-panel-item.dead .player-panel-name {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.player-panel-item.dead .player-panel-pos {
+  color: var(--error);
+}
+
 /* Player Markers on Map */
 .player-marker {
   pointer-events: none;
@@ -879,4 +941,107 @@ html, body {
 .ship-marker {
   pointer-events: auto;
   cursor: pointer;
+}
+
+/* Ship interaction mode styles */
+.ship-marker.selected {
+  cursor: crosshair;
+}
+
+.ship-select-ring {
+  animation: ship-select-pulse 1s ease-in-out infinite;
+}
+
+@keyframes ship-select-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.ship-passenger-name {
+  font-family: var(--font-display);
+}
+
+.mode-hint.interaction {
+  background: var(--bg-surface);
+  border-color: var(--gold-primary);
+  color: var(--gold-primary);
+}
+
+/* ============================================
+   Health Bars
+   ============================================ */
+
+.health-bar-container {
+  pointer-events: none;
+}
+
+.health-bar-bg {
+  fill: rgba(0, 0, 0, 0.7);
+  stroke: var(--border-dark);
+  stroke-width: 1;
+}
+
+.health-bar-fill {
+  transition: width 0.3s ease;
+}
+
+.health-bar-fill.health-high {
+  fill: var(--success);
+}
+
+.health-bar-fill.health-medium {
+  fill: #d4a537;
+}
+
+.health-bar-fill.health-low {
+  fill: var(--error);
+}
+
+/* ============================================
+   Battle Mode Styles
+   ============================================ */
+
+.battle-selected {
+  animation: battle-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes battle-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(255, 80, 80, 0.8));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(255, 80, 80, 1));
+  }
+}
+
+.mode-hint.battle-target {
+  border-color: var(--error);
+  color: #ff8080;
+}
+
+/* ============================================
+   Move Mode Styles
+   ============================================ */
+
+.move-selected {
+  animation: move-pulse 1s ease-in-out infinite;
+}
+
+@keyframes move-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(80, 200, 255, 0.8));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(80, 200, 255, 1));
+  }
+}
+
+.hex.move-destination:hover {
+  fill: rgba(80, 200, 255, 0.4);
+  stroke: #50c8ff;
+}
+
+.mode-hint.move-destination {
+  border-color: #50c8ff;
+  color: #80e0ff;
 }

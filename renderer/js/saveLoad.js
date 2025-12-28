@@ -47,7 +47,8 @@ function renderGameState() {
   // Render ships on map
   renderShips();
 
-  // TODO: render attacks when implemented
+  // Render health bars for damaged objects
+  renderAllHealthBars();
 }
 
 // Initialize save/load event listeners

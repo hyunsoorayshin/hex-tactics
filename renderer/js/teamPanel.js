@@ -68,16 +68,32 @@ function renderPlayerList() {
 
   playerList.innerHTML = players.map(([playerId, player]) => `
     <div class="player-item" data-player-id="${playerId}">
-      <input type="text" class="player-name" value="${player.name}"
-             onchange="updatePlayerName('${playerId}', this.value)">
+      <input type="text" class="player-name" value="${player.name}">
       <div class="player-gold">
         <span class="player-gold-icon">&#9733;</span>
-        <input type="number" class="player-gold-input" value="${player.gold}" min="0"
-               onchange="updatePlayerGold('${playerId}', parseInt(this.value) || 0)">
+        <input type="number" class="player-gold-input" value="${player.gold}" min="0">
       </div>
-      <button class="player-remove" onclick="removePlayer('${playerId}')">&times;</button>
+      <button class="player-remove">&times;</button>
     </div>
   `).join('');
+
+  // Attach event listeners (CSP blocks inline handlers)
+  players.forEach(([playerId]) => {
+    const item = playerList.querySelector(`[data-player-id="${playerId}"]`);
+    if (!item) return;
+
+    item.querySelector('.player-name').addEventListener('input', (e) => {
+      updatePlayerName(playerId, e.target.value);
+    });
+
+    item.querySelector('.player-gold-input').addEventListener('input', (e) => {
+      updatePlayerGold(playerId, parseInt(e.target.value) || 0);
+    });
+
+    item.querySelector('.player-remove').addEventListener('click', () => {
+      removePlayer(playerId);
+    });
+  });
 }
 
 function addPlayer() {

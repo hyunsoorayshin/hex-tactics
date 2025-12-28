@@ -16,9 +16,6 @@ function initApp() {
     generateHexGrid();
     resetView();
 
-    // Auto-load last save
-    autoLoadGame();
-
     // Update UI
     updateStatus();
   };

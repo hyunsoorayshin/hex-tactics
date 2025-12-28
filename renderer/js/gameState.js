@@ -2,15 +2,28 @@
 // Game State Module
 // ============================================
 
-// Object health values
+// Object health values (tuned for faster gameplay)
 const OBJECT_HEALTH = {
-  bridge: 75,
-  wall: 100,
-  ship: 100,
-  town: 150,
-  army: 250,
-  castle: 500
+  bridge: 40,
+  wall: 50,
+  ship: 60,
+  town: 120,
+  army: 100,
+  castle: 350  // Requires 4-5 King attacks (80 dmg each)
 };
+
+// Object costs (gold)
+const OBJECT_COSTS = {
+  wall: 25,
+  bridge: 50,
+  ship: 75,
+  army: 100,
+  town: 1000,
+  castle: 5000
+};
+
+// Revive cost per player
+const REVIVE_COST = 10;
 
 // Current team selection
 let currentTeam = 1;
@@ -29,18 +42,18 @@ const GameState = {
   // Attack placements: { id: { from: "q,r", to: "q,r", data: {} } }
   attacks: {},
 
-  // Teams data: { teamId: { name, color, border, players, objectsLost: { type: count } } }
+  // Teams data: { teamId: { name, color, border, players, objectsLost: { type: count }, reviveCount } }
   teams: {
-    1: { name: 'Team 1', color: 'rgba(255, 0, 0, 0.4)', border: '#ff0000', players: {}, objectsLost: {} },
-    2: { name: 'Team 2', color: 'rgba(0, 128, 255, 0.4)', border: '#0080ff', players: {}, objectsLost: {} },
-    3: { name: 'Team 3', color: 'rgba(0, 255, 0, 0.4)', border: '#00ff00', players: {}, objectsLost: {} },
-    4: { name: 'Team 4', color: 'rgba(255, 255, 0, 0.4)', border: '#ffff00', players: {}, objectsLost: {} },
-    5: { name: 'Team 5', color: 'rgba(255, 0, 255, 0.4)', border: '#ff00ff', players: {}, objectsLost: {} },
-    6: { name: 'Team 6', color: 'rgba(0, 255, 255, 0.4)', border: '#00ffff', players: {}, objectsLost: {} },
-    7: { name: 'Team 7', color: 'rgba(255, 128, 0, 0.4)', border: '#ff8000', players: {}, objectsLost: {} },
-    8: { name: 'Team 8', color: 'rgba(128, 0, 255, 0.4)', border: '#8000ff', players: {}, objectsLost: {} },
-    9: { name: 'Team 9', color: 'rgba(255, 128, 128, 0.4)', border: '#ff8080', players: {}, objectsLost: {} },
-    0: { name: 'Team 10', color: 'rgba(128, 255, 128, 0.4)', border: '#80ff80', players: {}, objectsLost: {} }
+    1: { name: 'Team 1', color: 'rgba(255, 0, 0, 0.4)', border: '#ff0000', players: {}, objectsLost: {}, reviveCount: 0 },
+    2: { name: 'Team 2', color: 'rgba(0, 128, 255, 0.4)', border: '#0080ff', players: {}, objectsLost: {}, reviveCount: 0 },
+    3: { name: 'Team 3', color: 'rgba(0, 255, 0, 0.4)', border: '#00ff00', players: {}, objectsLost: {}, reviveCount: 0 },
+    4: { name: 'Team 4', color: 'rgba(255, 255, 0, 0.4)', border: '#ffff00', players: {}, objectsLost: {}, reviveCount: 0 },
+    5: { name: 'Team 5', color: 'rgba(255, 0, 255, 0.4)', border: '#ff00ff', players: {}, objectsLost: {}, reviveCount: 0 },
+    6: { name: 'Team 6', color: 'rgba(0, 255, 255, 0.4)', border: '#00ffff', players: {}, objectsLost: {}, reviveCount: 0 },
+    7: { name: 'Team 7', color: 'rgba(255, 128, 0, 0.4)', border: '#ff8000', players: {}, objectsLost: {}, reviveCount: 0 },
+    8: { name: 'Team 8', color: 'rgba(128, 0, 255, 0.4)', border: '#8000ff', players: {}, objectsLost: {}, reviveCount: 0 },
+    9: { name: 'Team 9', color: 'rgba(255, 128, 128, 0.4)', border: '#ff8080', players: {}, objectsLost: {}, reviveCount: 0 },
+    0: { name: 'Team 10', color: 'rgba(128, 255, 128, 0.4)', border: '#80ff80', players: {}, objectsLost: {}, reviveCount: 0 }
   },
 
   // Export state for saving
@@ -75,7 +88,7 @@ const GameState = {
     // Reset teams to default
     for (let i = 0; i <= 9; i++) {
       const key = i === 10 ? 0 : i;
-      this.teams[key] = { name: `Team ${i === 0 ? 10 : i}`, players: {}, objectsLost: {} };
+      this.teams[key] = { name: `Team ${i === 0 ? 10 : i}`, players: {}, objectsLost: {}, reviveCount: 0 };
     }
   },
 
@@ -84,11 +97,58 @@ const GameState = {
     return Object.values(this.land).filter(t => t === teamId).length;
   },
 
-  // Get team's total gold (sum of all player gold)
+  // Get team's total gold (sum of all player gold) - this is merit points
   getTeamGold(teamId) {
     const team = this.teams[teamId];
     if (!team || !team.players) return 0;
     return Object.values(team.players).reduce((sum, p) => sum + (p.gold || 0), 0);
+  },
+
+  // Get cost of team's currently placed objects
+  getTeamObjectsCost(teamId) {
+    let cost = 0;
+    // Count hex objects
+    for (const obj of Object.values(this.hexObjects)) {
+      if (obj.teamId === teamId && OBJECT_COSTS[obj.type]) {
+        cost += OBJECT_COSTS[obj.type];
+      }
+    }
+    // Count edge objects
+    for (const obj of Object.values(this.edgeObjects)) {
+      if (obj.teamId === teamId && OBJECT_COSTS[obj.type]) {
+        cost += OBJECT_COSTS[obj.type];
+      }
+    }
+    return cost;
+  },
+
+  // Get cost of team's lost objects
+  getTeamLostObjectsCost(teamId) {
+    const team = this.teams[teamId];
+    if (!team || !team.objectsLost) return 0;
+    let cost = 0;
+    for (const [type, count] of Object.entries(team.objectsLost)) {
+      if (OBJECT_COSTS[type]) {
+        cost += OBJECT_COSTS[type] * count;
+      }
+    }
+    return cost;
+  },
+
+  // Get team's revive costs
+  getTeamReviveCost(teamId) {
+    const team = this.teams[teamId];
+    if (!team) return 0;
+    return (team.reviveCount || 0) * REVIVE_COST;
+  },
+
+  // Get team's available gold (merit points - all costs)
+  getTeamAvailableGold(teamId) {
+    const meritPoints = this.getTeamGold(teamId);
+    const objectsCost = this.getTeamObjectsCost(teamId);
+    const lostCost = this.getTeamLostObjectsCost(teamId);
+    const reviveCost = this.getTeamReviveCost(teamId);
+    return meritPoints - objectsCost - lostCost - reviveCost;
   },
 
   // Get team's asset counts

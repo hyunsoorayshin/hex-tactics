@@ -60,10 +60,14 @@ function createTeamPanelHTML() {
 
       <div class="divider-medieval"></div>
 
-      <div class="team-stats team-stats-2col">
+      <div class="team-stats team-stats-3col">
         <div class="team-stat">
-          <div class="team-stat-value" id="stat-gold">0</div>
-          <div class="team-stat-label">Total Gold</div>
+          <div class="team-stat-value" id="stat-merit">0</div>
+          <div class="team-stat-label">Merit Points</div>
+        </div>
+        <div class="team-stat">
+          <div class="team-stat-value" id="stat-available">0</div>
+          <div class="team-stat-label">Available Gold</div>
         </div>
         <div class="team-stat">
           <div class="team-stat-value" id="stat-land">0</div>
@@ -173,7 +177,8 @@ function updateTeamPanel() {
   document.getElementById('team-panel-name').value = team.name;
 
   // Update stats
-  document.getElementById('stat-gold').textContent = GameState.getTeamGold(currentTeam);
+  document.getElementById('stat-merit').textContent = GameState.getTeamGold(currentTeam);
+  document.getElementById('stat-available').textContent = GameState.getTeamAvailableGold(currentTeam);
   document.getElementById('stat-land').textContent = GameState.getTeamLandCount(currentTeam);
 
   // Update asset counts with lost numbers in parentheses
@@ -280,7 +285,8 @@ function removePlayer(playerId) {
 
 function updateTeamStats() {
   const currentTeam = getCurrentTeam();
-  document.getElementById('stat-gold').textContent = GameState.getTeamGold(currentTeam);
+  document.getElementById('stat-merit').textContent = GameState.getTeamGold(currentTeam);
+  document.getElementById('stat-available').textContent = GameState.getTeamAvailableGold(currentTeam);
 }
 
 function updateTeamName(name) {

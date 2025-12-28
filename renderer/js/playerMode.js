@@ -18,9 +18,9 @@ const RANKS = [
 
 // Combat stats by rank
 const RANK_STATS = {
-  'Peasant': { health: 20, attack: 5 },
-  'Farmer': { health: 30, attack: 10 },
-  'Merchant': { health: 40, attack: 15 },
+  'Peasant': { health: 20, attack: 10 },
+  'Farmer': { health: 30, attack: 15 },
+  'Merchant': { health: 40, attack: 20 },
   'Knight': { health: 60, attack: 30 },
   'Grand Knight': { health: 80, attack: 45 },
   'Baron': { health: 100, attack: 60 },
@@ -184,9 +184,15 @@ function onPlayerModeHexClick(hexKey, element) {
     player.maxHealth = stats.health;
     player.isDead = false;
     player.position = hexKey;
-    player.revives = (player.revives || 0) + 1;  // Track revive
+    player.revives = (player.revives || 0) + 1;  // Track player revive count
 
-    showNotification(`${player.name} revived at ${hexObj.type}!`);
+    // Track team revive cost
+    const team = GameState.teams[currentTeam];
+    if (team) {
+      team.reviveCount = (team.reviveCount || 0) + 1;
+    }
+
+    showNotification(`${player.name} revived at ${hexObj.type}! (-${REVIVE_COST}g)`);
   } else {
     // Normal placement for living players
     GameState.setPlayerPosition(currentTeam, selectedPlayerId, hexKey);

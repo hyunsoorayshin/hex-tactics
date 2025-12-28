@@ -4,6 +4,10 @@
 
 let castleMode = false;
 
+// Housing interaction state
+let castleHousingMode = null; // 'housing' | 'evicting' | null
+let selectedCastleHex = null;
+
 function isCastleMode() {
   return castleMode;
 }
@@ -14,12 +18,22 @@ function setCastleMode(enabled) {
     showCastleHint();
   } else {
     hideCastleHint();
+    clearCastleHousing();
   }
 }
 
 function toggleCastleMode() {
   setCastleMode(!castleMode);
   return castleMode;
+}
+
+function getCastleHousingMode() {
+  return castleHousingMode;
+}
+
+function clearCastleHousing() {
+  castleHousingMode = null;
+  selectedCastleHex = null;
 }
 
 // ============================================
@@ -229,6 +243,10 @@ function removeCastle(hexKey) {
 
   // If this is the center, remove the castle and all territory
   if (obj.type === 'castle') {
+    // Evict any housed player first
+    if (obj.housed) {
+      evictFromCastle(hexKey);
+    }
     const { all } = getCastleHexes(hexKey);
     for (const hex of all) {
       delete GameState.hexObjects[hex.toString()];
@@ -244,6 +262,104 @@ function removeCastle(hexKey) {
 }
 
 // ============================================
+// Castle Housing System
+// ============================================
+
+function enterCastleHousing(hexKey, castle) {
+  selectedCastleHex = hexKey;
+
+  if (castle.housed) {
+    // Castle has resident - enter evicting mode
+    castleHousingMode = 'evicting';
+    showNotification(`Click a hex to move ${castle.housed.name} out`);
+  } else {
+    // Castle is empty - enter housing mode
+    castleHousingMode = 'housing';
+    showNotification('Click a player to house them');
+  }
+
+  renderCastles();
+}
+
+function handleCastleHousing(hexKey) {
+  // Check if there's a player at this hex
+  const playersAtHex = GameState.getPlayersAtHex(hexKey);
+
+  if (playersAtHex.length === 0) {
+    showNotification('No player at this hex', 'error');
+    return;
+  }
+
+  const { teamId, playerId, player } = playersAtHex[0];
+  const castle = GameState.hexObjects[selectedCastleHex];
+
+  if (!castle || castle.type !== 'castle') {
+    showNotification('Castle not found', 'error');
+    clearCastleHousing();
+    return;
+  }
+
+  // House the player in the castle
+  castle.housed = {
+    teamId: teamId,
+    playerId: playerId,
+    name: player.name
+  };
+
+  // Remove player from their hex position
+  GameState.setPlayerPosition(teamId, playerId, null);
+
+  // Heal player to full health
+  const stats = getPlayerStats(player.gold);
+  player.health = stats.health;
+  player.maxHealth = stats.health;
+
+  showNotification(`${player.name} is now housed in castle (healed to full)!`);
+  clearCastleHousing();
+
+  // Re-render
+  renderCastles();
+  renderPlayerMarkers();
+  renderAllHealthBars();
+}
+
+function handleCastleEvicting(hexKey) {
+  const castle = GameState.hexObjects[selectedCastleHex];
+
+  if (!castle || castle.type !== 'castle' || !castle.housed) {
+    showNotification('No resident to evict', 'error');
+    clearCastleHousing();
+    return;
+  }
+
+  const { teamId, playerId, name } = castle.housed;
+
+  // Set player position to the clicked hex
+  GameState.setPlayerPosition(teamId, playerId, hexKey);
+
+  // Clear housed player from castle
+  delete castle.housed;
+
+  showNotification(`${name} left the castle`);
+  clearCastleHousing();
+
+  // Re-render
+  renderCastles();
+  renderPlayerMarkers();
+  renderAllHealthBars();
+}
+
+function evictFromCastle(hexKey) {
+  const castle = GameState.hexObjects[hexKey];
+  if (!castle?.housed) return;
+
+  const { teamId, playerId } = castle.housed;
+  // Player loses their position (will need to be placed again)
+  GameState.setPlayerPosition(teamId, playerId, null);
+  delete castle.housed;
+}
+
+// ============================================
 // Castle Rendering
 // ============================================
 
@@ -255,12 +371,13 @@ function renderCastles() {
   // Find all castles (center hexes only)
   for (const [hexKey, obj] of Object.entries(GameState.hexObjects)) {
     if (obj.type === 'castle') {
-      addCastleMarker(hexKey, obj.teamId);
+      const isSelected = hexKey === selectedCastleHex;
+      addCastleMarker(hexKey, obj.teamId, obj.housed, isSelected);
     }
   }
 }
 
-function addCastleMarker(hexKey, teamId) {
+function addCastleMarker(hexKey, teamId, housed, isSelected) {
   const hexEl = document.querySelector(`[data-hex="${hexKey}"]`);
   if (!hexEl) return;
 
@@ -287,19 +404,44 @@ function addCastleMarker(hexKey, teamId) {
   marker.addEventListener('click', (e) => {
     e.stopPropagation();
     const metaKey = e.metaKey || e.ctrlKey;
+    const shiftKey = e.shiftKey;
+
+    // Handle housing mode clicks
+    if (castleHousingMode === 'housing') {
+      handleCastleHousing(hexKey);
+      return;
+    }
+    if (castleHousingMode === 'evicting') {
+      handleCastleEvicting(hexKey);
+      return;
+    }
 
     // Delegate to other modes if active
     if (isBattleMode()) {
-      onBattleModeHexClick(hexKey, null, e.shiftKey);
+      onBattleModeHexClick(hexKey, null, shiftKey);
       return;
     }
     if (isMoveMode()) {
-      onMoveModeHexClick(hexKey, null, e.shiftKey);
+      onMoveModeHexClick(hexKey, null, shiftKey);
+      return;
+    }
+    if (isTownMode()) {
+      // Delegate to town mode for upgrade
+      onTownModeHexClick(hexKey, null, metaKey);
       return;
     }
     if (isPlayerMode()) {
       // Delegate to player mode for revival at castle
       onPlayerModeHexClick(hexKey, null);
+      return;
+    }
+
+    // Shift+click to house/evict player (works in any mode or no mode)
+    if (shiftKey) {
+      const castle = GameState.hexObjects[hexKey];
+      if (castle) {
+        enterCastleHousing(hexKey, castle);
+      }
       return;
     }
 
@@ -309,7 +451,7 @@ function addCastleMarker(hexKey, teamId) {
         removeCastle(hexKey);
         showNotification('Castle removed');
       } else {
-        showNotification('Cmd+click to remove castle', 'error');
+        showNotification('Shift+click to house player. Cmd+click to remove.', 'error');
       }
     }
   });
@@ -374,5 +516,52 @@ function addCastleMarker(hexKey, teamId) {
   icon.classList.add('castle-marker-icon');
 
   marker.appendChild(icon);
+
+  // Add housed player name label if castle has a resident
+  if (housed) {
+    const housedTeam = GameState.teams[housed.teamId];
+    const housedColor = housedTeam?.border || '#ffffff';
+
+    // Name background for readability
+    const nameWidth = housed.name.length * 7 + 8;
+    const nameBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    nameBg.setAttribute('x', centerX - nameWidth / 2);
+    nameBg.setAttribute('y', centerY - iconSize / 2 - 20);
+    nameBg.setAttribute('width', nameWidth);
+    nameBg.setAttribute('height', 14);
+    nameBg.setAttribute('rx', 3);
+    nameBg.setAttribute('fill', 'rgba(0, 0, 0, 0.8)');
+    nameBg.setAttribute('stroke', housedColor);
+    nameBg.setAttribute('stroke-width', 1);
+
+    // Housed player name text
+    const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    nameText.setAttribute('x', centerX);
+    nameText.setAttribute('y', centerY - iconSize / 2 - 8);
+    nameText.setAttribute('text-anchor', 'middle');
+    nameText.setAttribute('fill', '#fff');
+    nameText.setAttribute('font-size', '11');
+    nameText.setAttribute('font-weight', 'bold');
+    nameText.classList.add('castle-housed-name');
+    nameText.textContent = housed.name;
+
+    marker.appendChild(nameBg);
+    marker.appendChild(nameText);
+  }
+
+  // Add selected indicator
+  if (isSelected) {
+    const selectRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    selectRing.setAttribute('cx', centerX);
+    selectRing.setAttribute('cy', centerY);
+    selectRing.setAttribute('r', iconSize / 2 + 8);
+    selectRing.setAttribute('fill', 'none');
+    selectRing.setAttribute('stroke', '#ffff00');
+    selectRing.setAttribute('stroke-width', 2);
+    selectRing.setAttribute('stroke-dasharray', '5,3');
+    selectRing.classList.add('castle-select-ring');
+    marker.insertBefore(selectRing, marker.firstChild);
+  }
+
   svg.appendChild(marker);
 }

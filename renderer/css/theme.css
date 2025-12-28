@@ -477,6 +477,14 @@ html, body {
   grid-template-columns: repeat(2, 1fr);
 }
 
+.team-stats.team-stats-3col {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.team-stats.team-stats-3col .team-stat-value {
+  font-size: 22px;
+}
+
 .team-stat {
   background: var(--bg-medium);
   border: 1px solid var(--border-dark);

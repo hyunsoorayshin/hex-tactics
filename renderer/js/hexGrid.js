@@ -180,6 +180,24 @@ function generateHexGrid() {
 function onHexClick(hex, element, shiftKey, metaKey) {
   const hexKey = hex.toString();
 
+  // Handle building housing mode clicks (takes priority over other modes)
+  if (getTownHousingMode() === 'housing') {
+    handleTownHousing(hexKey);
+    return;
+  }
+  if (getTownHousingMode() === 'evicting') {
+    handleTownEvicting(hexKey);
+    return;
+  }
+  if (getCastleHousingMode() === 'housing') {
+    handleCastleHousing(hexKey);
+    return;
+  }
+  if (getCastleHousingMode() === 'evicting') {
+    handleCastleEvicting(hexKey);
+    return;
+  }
+
   if (isLandMode()) {
     // Delegate to land mode module
     onLandClick(hexKey, element);

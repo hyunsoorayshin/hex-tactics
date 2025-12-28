@@ -72,10 +72,18 @@ Core state management:
   - `edgeObjects` - Objects on edges (with health values)
   - `land` - Hex ownership by team
   - `attacks` - Attack placements
-  - `teams` - Team data (name, color, border, players, objectsLost)
+  - `teams` - Team data (name, color, border, players, objectsLost, reviveCount)
 - `OBJECT_HEALTH` - Health constants for all object types
+- `OBJECT_COSTS` - Gold costs for all object types
+- `REVIVE_COST` - Cost per player revive (10g)
 - Current team selection state
-- Helper functions: `getCurrentTeam()`, `setCurrentTeam()`
+- Helper functions:
+  - `getCurrentTeam()`, `setCurrentTeam()`
+  - `getTeamGold()` - Sum of all player gold (merit points)
+  - `getTeamObjectsCost()` - Cost of currently placed objects
+  - `getTeamLostObjectsCost()` - Cost of destroyed objects
+  - `getTeamReviveCost()` - Total revive costs
+  - `getTeamAvailableGold()` - Merit points minus all costs
 
 #### `landMode.js`
 Land ownership system:
@@ -113,9 +121,15 @@ Castle placement system (upgrade from town):
 - `placeCastle()` - Upgrades town to castle, marks all 18 neighbors as castle-territory
 - `removeCastle()` - Removes castle center only (territory hexes remain)
 - `renderCastles()` - Draws castle markers with team-specific images
-- Health: 500 HP
+- Health: 350 HP (requires 4-5 King attacks)
 - Uses team-colored castle images (`castle1.png` - `castle10.png`)
-- Exports: `isCastleMode()`, `setCastleMode()`, `toggleCastleMode()`, `renderCastles()`
+- **Housing System:**
+  - Shift+click empty castle → housing mode → click player → player housed (healed to full)
+  - Shift+click occupied castle → evicting mode → click hex → player moves out
+  - Castle stores `housed: { teamId, playerId, name }` when occupied
+  - Housed player name label displayed above castle icon
+  - Yellow dashed ring indicates selected castle during interaction
+- Exports: `isCastleMode()`, `setCastleMode()`, `toggleCastleMode()`, `renderCastles()`, `getCastleHousingMode()`, `clearCastleHousing()`
 
 #### `bridgeMode.js`
 Bridge placement system:
@@ -144,9 +158,15 @@ Town placement system (territory-based):
 - `removeTown()` - Removes town and all associated territory
 - `renderTowns()` - Draws town markers with team color outline
 - Uses SVG filter for team-colored border around PNG icon
-- Health: 150 HP
+- Health: 120 HP
 - Can be upgraded to castle (see castleMode.js)
-- Exports: `isTownMode()`, `setTownMode()`, `toggleTownMode()`, `renderTowns()`
+- **Housing System:**
+  - Shift+click empty town → housing mode → click player → player housed (healed to full)
+  - Shift+click occupied town → evicting mode → click hex → player moves out
+  - Town stores `housed: { teamId, playerId, name }` when occupied
+  - Housed player name label displayed above town icon
+  - Yellow dashed ring indicates selected town during interaction
+- Exports: `isTownMode()`, `setTownMode()`, `toggleTownMode()`, `renderTowns()`, `getTownHousingMode()`, `clearTownHousing()`
 
 #### `wallMode.js`
 Wall placement system (edge objects):
@@ -232,11 +252,11 @@ Team management UI:
 - Creates panel HTML dynamically via `createTeamPanelHTML()`
 - Modal panel opened with Tab key
 - **Team Stats Display:**
-  - Total gold (sum of player gold)
+  - Merit Points (sum of player gold - never touched)
+  - Available Gold (merit points - object costs - lost object costs - revive costs)
   - Land count
-  - Total kills (sum of player kills)
-  - Objects lost (team's destroyed objects)
 - **Asset Counts:** Castle, Wall, Town, Army, Ship, Bridge
+  - Shows count with lost in parentheses: `2 (1)` = 2 present, 1 lost
 - **Player List:**
   - Name (editable), gold (editable)
   - K/D/R badges (Kills, Deaths, Revives)
@@ -348,7 +368,8 @@ User: Cmd+O
 | S | Toggle ship mode |
 | X | Toggle battle mode |
 | M | Toggle move mode |
-| Shift + Click (ship) | Board/disembark player (in ship mode) |
+| Shift + Click (ship) | Board/disembark player |
+| Shift + Click (town/castle) | House/evict player |
 | Cmd + Click | Remove object (in placement modes) |
 | Shift + 1-9, 0 | Select team 1-10 |
 | Tab | Toggle team panel |
@@ -365,6 +386,7 @@ GameState = {
       maxHealth: number,   // Maximum health (objects only)
       centerHex: "q,r",    // For territory hexes, reference to center
       passenger: { teamId, playerId, name },  // For ships with passengers
+      housed: { teamId, playerId, name },     // For towns/castles with housed players
       rotation: number     // For bridges (0, 60, 120 degrees)
     }
   },
@@ -387,7 +409,15 @@ GameState = {
       name: string,
       color: string,       // rgba fill color for land
       border: string,      // hex color for borders/outlines
-      objectsLost: number, // Count of team's objects destroyed
+      objectsLost: {       // Count of team's objects destroyed by type
+        castle: number,
+        town: number,
+        army: number,
+        ship: number,
+        bridge: number,
+        wall: number
+      },
+      reviveCount: number, // Total player revives (for cost calculation)
       players: {
         playerId: {
           name: string,
@@ -405,6 +435,19 @@ GameState = {
   }
 }
 ```
+
+## Economy System
+
+Team gold is calculated as:
+```
+Available Gold = Merit Points - Present Objects Cost - Lost Objects Cost - Revive Costs
+```
+
+Where:
+- **Merit Points** = Sum of all player gold (never modified by the game)
+- **Present Objects Cost** = Sum of costs for all currently placed objects
+- **Lost Objects Cost** = Sum of costs for all destroyed objects
+- **Revive Costs** = reviveCount × 10g
 
 ## Rank System
 
@@ -426,24 +469,28 @@ Player ranks are determined by their gold amount:
 
 | Rank | Gold Range | Health | Attack |
 |------|------------|--------|--------|
-| Peasant | 0-99 | 20 | 5 |
-| Farmer | 100-999 | 30 | 10 |
-| Merchant | 1000-1999 | 40 | 15 |
+| Peasant | 0-99 | 20 | 10 |
+| Farmer | 100-999 | 30 | 15 |
+| Merchant | 1000-1999 | 40 | 20 |
 | Knight | 2000-4999 | 60 | 30 |
 | Grand Knight | 5000-7999 | 80 | 45 |
 | Baron | 8000-9999 | 100 | 60 |
 | King | 10000+ | 150 | 80 |
 
-### Object Health
+### Object Health & Cost
 
-| Object | Health |
-|--------|--------|
-| Bridge | 75 |
-| Wall | 100 |
-| Ship | 100 |
-| Town | 150 |
-| Army | 250 |
-| Castle | 500 |
+| Object | Health | Cost |
+|--------|--------|------|
+| Bridge | 40 | 50g |
+| Wall | 50 | 25g |
+| Ship | 60 | 75g |
+| Army | 100 | 100g |
+| Town | 120 | 1,000g |
+| Castle | 350 | 5,000g |
+
+### Revive Cost
+
+- **10g** per player revive (deducted from team available gold)
 
 ### Combat Rules
 

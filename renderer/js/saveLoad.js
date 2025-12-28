@@ -26,7 +26,28 @@ function renderGameState() {
   // Render land ownership
   renderLand();
 
-  // TODO: render hexObjects, edgeObjects, attacks when implemented
+  // Render player markers on map
+  renderPlayerMarkers();
+
+  // Render castles on map
+  renderCastles();
+
+  // Render bridges on map
+  renderBridges();
+
+  // Render armies on map
+  renderArmies();
+
+  // Render towns on map
+  renderTowns();
+
+  // Render walls on map
+  renderWalls();
+
+  // Render ships on map
+  renderShips();
+
+  // TODO: render attacks when implemented
 }
 
 // Initialize save/load event listeners

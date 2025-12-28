@@ -14,15 +14,31 @@ function updateStatus() {
   const currentTeam = getCurrentTeam();
   const teamInfo = GameState.teams[currentTeam];
   const landModeActive = isLandMode();
-  const modeText = landModeActive ? 'LAND MODE' : 'SELECT MODE';
+  const playerModeActive = isPlayerMode();
+  const castleModeActive = isCastleMode();
+  const bridgeModeActive = isBridgeMode();
+  const armyModeActive = isArmyMode();
+  const townModeActive = isTownMode();
+  const wallModeActive = isWallMode();
+  const shipModeActive = isShipMode();
+
+  let modeText = 'SELECT';
+  if (landModeActive) modeText = 'LAND';
+  if (playerModeActive) modeText = 'PLAYER';
+  if (castleModeActive) modeText = 'CASTLE';
+  if (bridgeModeActive) modeText = 'BRIDGE';
+  if (armyModeActive) modeText = 'ARMY';
+  if (townModeActive) modeText = 'TOWN';
+  if (wallModeActive) modeText = 'WALL';
+  if (shipModeActive) modeText = 'SHIP';
 
   status.innerHTML = `
     <span class="team-indicator" style="background: ${teamInfo.border}"></span>
     <span>Team ${currentTeam === 0 ? 10 : currentTeam}</span>
     <span class="divider">|</span>
-    <span class="mode ${landModeActive ? 'active' : ''}">${modeText}</span>
+    <span class="mode ${(landModeActive || playerModeActive || castleModeActive || bridgeModeActive || armyModeActive || townModeActive || wallModeActive || shipModeActive) ? 'active' : ''}">${modeText}</span>
     <span class="divider">|</span>
-    <span class="hint">L: Land Mode | Shift+1-0: Select Team | Tab: Team Panel</span>
+    <span class="hint">L: Land | C: Castle | B: Bridge | A: Army | T: Town | W: Wall | S: Ship</span>
   `;
 }
 

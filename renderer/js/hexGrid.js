@@ -62,6 +62,23 @@ function getHexCorners(hex) {
   return corners;
 }
 
+// Get the 6 neighboring hexes (axial coordinates)
+const HEX_DIRECTIONS = [
+  { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+  { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
+];
+
+function getHexNeighbors(hex) {
+  return HEX_DIRECTIONS.map(dir => new Hex(hex.q + dir.q, hex.r + dir.r));
+}
+
+function getHexAndNeighbors(hexKey) {
+  const [q, r] = hexKey.split(',').map(Number);
+  const centerHex = new Hex(q, r);
+  const neighbors = getHexNeighbors(centerHex);
+  return [centerHex, ...neighbors];
+}
+
 // Get edge center point and angle for placing edge objects
 function getEdgeCenter(hex, side) {
   const corners = getHexCorners(hex);
@@ -164,22 +181,26 @@ function onHexClick(hex, element) {
   const hexKey = hex.toString();
 
   if (isLandMode()) {
-    // Toggle land assignment
-    if (GameState.land[hexKey] === getCurrentTeam()) {
-      // Remove land if clicking same team
-      delete GameState.land[hexKey];
-      element.style.fill = '';
-      element.style.stroke = '';
-      console.log(`Land removed: ${hexKey}`);
-    } else {
-      // Assign land to current team
-      const teamId = getCurrentTeam();
-      GameState.land[hexKey] = teamId;
-      const team = GameState.teams[teamId];
-      element.style.fill = team.color;
-      element.style.stroke = team.border;
-      console.log(`Land assigned: ${hexKey} -> Team ${teamId}`);
-    }
+    // Delegate to land mode module
+    onLandClick(hexKey, element);
+  } else if (isPlayerMode()) {
+    // Delegate to player mode module
+    onPlayerModeHexClick(hexKey, element);
+  } else if (isCastleMode()) {
+    // Delegate to castle mode module
+    onCastleModeHexClick(hexKey, element);
+  } else if (isBridgeMode()) {
+    // Delegate to bridge mode module
+    onBridgeModeHexClick(hexKey, element);
+  } else if (isArmyMode()) {
+    // Delegate to army mode module
+    onArmyModeHexClick(hexKey, element);
+  } else if (isTownMode()) {
+    // Delegate to town mode module
+    onTownModeHexClick(hexKey, element);
+  } else if (isShipMode()) {
+    // Delegate to ship mode module
+    onShipModeHexClick(hexKey, element);
   } else {
     // Default: toggle selection
     element.classList.toggle('selected');
@@ -190,41 +211,12 @@ function onHexClick(hex, element) {
 // Edge click handler
 function onEdgeClick(hex, side, element) {
   const edgeKey = `${hex.toString()},${side}`;
-  console.log('Edge clicked:', edgeKey);
 
-  // Toggle selection visual
-  element.classList.toggle('selected');
-}
-
-// Apply land color to hex element
-function applyLandColor(hexKey, teamId) {
-  const element = document.querySelector(`[data-hex="${hexKey}"]`);
-  if (element && GameState.teams[teamId]) {
-    const team = GameState.teams[teamId];
-    element.style.fill = team.color;
-    element.style.stroke = team.border;
-  }
-}
-
-// Clear land color from hex
-function clearLandColor(hexKey) {
-  const element = document.querySelector(`[data-hex="${hexKey}"]`);
-  if (element) {
-    element.style.fill = '';
-    element.style.stroke = '';
-  }
-}
-
-// Render all land ownership from GameState
-function renderLand() {
-  // Clear all land colors first
-  document.querySelectorAll('.hex').forEach(hex => {
-    hex.style.fill = '';
-    hex.style.stroke = '';
-  });
-
-  // Apply land ownership colors
-  for (const [hexKey, teamId] of Object.entries(GameState.land)) {
-    applyLandColor(hexKey, teamId);
+  if (isWallMode()) {
+    onWallModeEdgeClick(edgeKey, element);
+  } else {
+    // Default: toggle selection
+    element.classList.toggle('selected');
+    console.log('Edge clicked:', edgeKey);
   }
 }

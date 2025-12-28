@@ -2,9 +2,8 @@
 // Game State Module
 // ============================================
 
-// Current mode state
+// Current team selection
 let currentTeam = 1;
-let landMode = false;
 
 // Game State Object
 const GameState = {
@@ -99,7 +98,7 @@ const GameState = {
   // Add player to team
   addPlayer(teamId, playerId, name, gold = 0) {
     if (!this.teams[teamId]) return;
-    this.teams[teamId].players[playerId] = { name, gold };
+    this.teams[teamId].players[playerId] = { name, gold, position: null };
   },
 
   // Update player gold
@@ -107,6 +106,36 @@ const GameState = {
     if (this.teams[teamId]?.players[playerId]) {
       this.teams[teamId].players[playerId].gold = gold;
     }
+  },
+
+  // Set player position on map
+  setPlayerPosition(teamId, playerId, hexKey) {
+    if (this.teams[teamId]?.players[playerId]) {
+      this.teams[teamId].players[playerId].position = hexKey;
+    }
+  },
+
+  // Get player by ID (searches all teams)
+  getPlayer(playerId) {
+    for (const [teamId, team] of Object.entries(this.teams)) {
+      if (team.players[playerId]) {
+        return { teamId: parseInt(teamId), player: team.players[playerId] };
+      }
+    }
+    return null;
+  },
+
+  // Get all players at a hex position
+  getPlayersAtHex(hexKey) {
+    const players = [];
+    for (const [teamId, team] of Object.entries(this.teams)) {
+      for (const [playerId, player] of Object.entries(team.players)) {
+        if (player.position === hexKey) {
+          players.push({ teamId: parseInt(teamId), playerId, player });
+        }
+      }
+    }
+    return players;
   },
 
   // Remove player from team
@@ -128,17 +157,4 @@ function setCurrentTeam(teamId) {
     return true;
   }
   return false;
-}
-
-function isLandMode() {
-  return landMode;
-}
-
-function setLandMode(enabled) {
-  landMode = enabled;
-}
-
-function toggleLandMode() {
-  landMode = !landMode;
-  return landMode;
 }

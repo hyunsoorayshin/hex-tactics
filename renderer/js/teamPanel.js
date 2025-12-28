@@ -4,6 +4,38 @@
 
 let teamPanelOpen = false;
 
+// Count specific asset types for a team
+function getTeamAssetCounts(teamId) {
+  const counts = {
+    castle: 0,
+    wall: 0,
+    town: 0,
+    army: 0,
+    ship: 0,
+    bridge: 0
+  };
+
+  // Count hex objects
+  for (const obj of Object.values(GameState.hexObjects)) {
+    if (obj.teamId === teamId) {
+      if (obj.type === 'castle') counts.castle++;
+      else if (obj.type === 'town') counts.town++;
+      else if (obj.type === 'army') counts.army++;
+      else if (obj.type === 'ship') counts.ship++;
+      else if (obj.type === 'bridge') counts.bridge++;
+    }
+  }
+
+  // Count edge objects
+  for (const obj of Object.values(GameState.edgeObjects)) {
+    if (obj.teamId === teamId) {
+      if (obj.type === 'wall') counts.wall++;
+    }
+  }
+
+  return counts;
+}
+
 function isTeamPanelOpen() {
   return teamPanelOpen;
 }
@@ -15,41 +47,79 @@ function createTeamPanelHTML() {
     <div class="corner-bl"></div>
     <button id="team-panel-close">&times;</button>
 
-    <div id="team-mascot">
-      <img id="team-mascot-img" src="" alt="Team Mascot">
-      <div id="team-mascot-placeholder">No Mascot</div>
-    </div>
-
-    <div id="team-panel-header">
-      <div id="team-panel-color"></div>
-      <input type="text" id="team-panel-name" value="Team Name">
-    </div>
-
-    <div class="divider-medieval"></div>
-
-    <div class="team-stats">
-      <div class="team-stat">
-        <div class="team-stat-value" id="stat-gold">0</div>
-        <div class="team-stat-label">Total Gold</div>
+    <div id="team-panel-content">
+      <div id="team-mascot">
+        <img id="team-mascot-img" src="" alt="Team Mascot">
+        <div id="team-mascot-placeholder">No Mascot</div>
       </div>
-      <div class="team-stat">
-        <div class="team-stat-value" id="stat-land">0</div>
-        <div class="team-stat-label">Land</div>
-      </div>
-      <div class="team-stat">
-        <div class="team-stat-value" id="stat-assets">0</div>
-        <div class="team-stat-label">Assets</div>
-      </div>
-    </div>
 
-    <div class="divider-medieval"></div>
-
-    <div class="team-section">
-      <div class="team-section-header">
-        <span class="team-section-title">Players / Students</span>
-        <button class="team-section-add" id="add-player-btn">+ Add Player</button>
+      <div id="team-panel-header">
+        <div id="team-panel-color"></div>
+        <input type="text" id="team-panel-name" value="Team Name">
       </div>
-      <div class="player-list" id="player-list"></div>
+
+      <div class="divider-medieval"></div>
+
+      <div class="team-stats team-stats-2col">
+        <div class="team-stat">
+          <div class="team-stat-value" id="stat-gold">0</div>
+          <div class="team-stat-label">Total Gold</div>
+        </div>
+        <div class="team-stat">
+          <div class="team-stat-value" id="stat-land">0</div>
+          <div class="team-stat-label">Land</div>
+        </div>
+      </div>
+
+      <div class="divider-medieval"></div>
+
+      <div class="team-section">
+        <div class="team-section-header">
+          <span class="team-section-title">Assets</span>
+        </div>
+        <div class="asset-grid">
+          <div class="asset-item">
+            <span class="asset-icon">&#127984;</span>
+            <span class="asset-value" id="asset-castle">0</span>
+            <span class="asset-label">Castle</span>
+          </div>
+          <div class="asset-item">
+            <span class="asset-icon">&#129521;</span>
+            <span class="asset-value" id="asset-wall">0</span>
+            <span class="asset-label">Wall</span>
+          </div>
+          <div class="asset-item">
+            <span class="asset-icon">&#127960;</span>
+            <span class="asset-value" id="asset-town">0</span>
+            <span class="asset-label">Town</span>
+          </div>
+          <div class="asset-item">
+            <span class="asset-icon">&#9876;</span>
+            <span class="asset-value" id="asset-army">0</span>
+            <span class="asset-label">Army</span>
+          </div>
+          <div class="asset-item">
+            <span class="asset-icon">&#9973;</span>
+            <span class="asset-value" id="asset-ship">0</span>
+            <span class="asset-label">Ship</span>
+          </div>
+          <div class="asset-item">
+            <span class="asset-icon">&#128739;</span>
+            <span class="asset-value" id="asset-bridge">0</span>
+            <span class="asset-label">Bridge</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider-medieval"></div>
+
+      <div class="team-section">
+        <div class="team-section-header">
+          <span class="team-section-title">Players / Students</span>
+          <button class="team-section-add" id="add-player-btn">+ Add Player</button>
+        </div>
+        <div class="player-list" id="player-list"></div>
+      </div>
     </div>
   `;
 }
@@ -105,8 +175,15 @@ function updateTeamPanel() {
   // Update stats
   document.getElementById('stat-gold').textContent = GameState.getTeamGold(currentTeam);
   document.getElementById('stat-land').textContent = GameState.getTeamLandCount(currentTeam);
-  const assets = GameState.getTeamAssets(currentTeam);
-  document.getElementById('stat-assets').textContent = assets.hexObjects + assets.edgeObjects;
+
+  // Update asset counts
+  const assetCounts = getTeamAssetCounts(currentTeam);
+  document.getElementById('asset-castle').textContent = assetCounts.castle;
+  document.getElementById('asset-wall').textContent = assetCounts.wall;
+  document.getElementById('asset-town').textContent = assetCounts.town;
+  document.getElementById('asset-army').textContent = assetCounts.army;
+  document.getElementById('asset-ship').textContent = assetCounts.ship;
+  document.getElementById('asset-bridge').textContent = assetCounts.bridge;
 
   // Update player list
   renderPlayerList();

@@ -139,10 +139,7 @@ function addWallMarker(edgeKey, teamId) {
 
     // Delegate to battle mode if active (walls can be attacked)
     if (isBattleMode()) {
-      // Parse edge key to get hex for battle mode
-      const parts = edgeKey.split(',');
-      const hexKey = `${parts[0]},${parts[1]}`;
-      onBattleModeHexClick(hexKey, null, e.shiftKey);
+      onBattleModeEdgeClick(edgeKey, null, e.shiftKey);
       return;
     }
 

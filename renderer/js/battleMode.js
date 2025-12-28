@@ -81,7 +81,7 @@ function updateBattleHint() {
 
 function onBattleModeHexClick(hexKey, element, shiftKey) {
   if (battlePhase === 'select_target') {
-    executeAttack(hexKey);
+    executeAttack(hexKey, false);
     return;
   }
 
@@ -92,6 +92,16 @@ function onBattleModeHexClick(hexKey, element, shiftKey) {
   } else {
     showNotification('No attacker here (need player or ship with passenger)', 'error');
   }
+}
+
+function onBattleModeEdgeClick(edgeKey, element, shiftKey) {
+  if (battlePhase === 'select_target') {
+    executeAttack(edgeKey, true);
+    return;
+  }
+
+  // Walls can't be attackers
+  showNotification('Walls cannot attack', 'error');
 }
 
 function getAttackerAtHex(hexKey) {
@@ -167,6 +177,23 @@ function getTargetAtHex(hexKey) {
   return null;
 }
 
+function getTargetAtEdge(edgeKey) {
+  // Check for edge object (wall)
+  const obj = GameState.edgeObjects[edgeKey];
+  if (obj) {
+    return {
+      type: obj.type,
+      edgeKey,
+      teamId: obj.teamId,
+      data: obj,
+      name: obj.type,
+      isEdgeObject: true
+    };
+  }
+
+  return null;
+}
+
 function selectAttacker(hexKey, attacker) {
   selectedAttacker = attacker;
   battlePhase = 'select_target';
@@ -206,7 +233,7 @@ function getTargetStats(target) {
       maxHealth: stats.health,
       isPlayer: true
     };
-  } else if (target.isObject) {
+  } else if (target.isObject || target.isEdgeObject) {
     const maxHealth = OBJECT_HEALTH[target.type] || 100;
     const currentHealth = target.data.health !== undefined ? target.data.health : maxHealth;
     return {
@@ -219,8 +246,8 @@ function getTargetStats(target) {
   return { attack: 0, health: 0, maxHealth: 0, isPlayer: false };
 }
 
-function executeAttack(targetHexKey) {
-  const target = getTargetAtHex(targetHexKey);
+function executeAttack(targetKey, isEdge = false) {
+  const target = isEdge ? getTargetAtEdge(targetKey) : getTargetAtHex(targetKey);
 
   if (!target) {
     showNotification('No valid target', 'error');
@@ -228,8 +255,8 @@ function executeAttack(targetHexKey) {
     return;
   }
 
-  // Can't attack yourself
-  if (targetHexKey === selectedAttacker.hexKey) {
+  // Can't attack yourself (only applies to hex objects, not edges)
+  if (!isEdge && targetKey === selectedAttacker.hexKey) {
     showNotification('Cannot attack yourself', 'error');
     clearBattleSelection();
     return;
@@ -282,6 +309,7 @@ function executeAttack(targetHexKey) {
   renderTowns();
   renderCastles();
   renderBridges();
+  renderWalls();
 
   clearBattleSelection();
 }
@@ -303,6 +331,12 @@ function initializeHealth(entity) {
     }
   } else if (entity.isObject) {
     const obj = entity.data || GameState.hexObjects[entity.hexKey];
+    if (obj && obj.health === undefined) {
+      obj.health = OBJECT_HEALTH[entity.type] || 100;
+      obj.maxHealth = obj.health;
+    }
+  } else if (entity.isEdgeObject) {
+    const obj = entity.data || GameState.edgeObjects[entity.edgeKey];
     if (obj && obj.health === undefined) {
       obj.health = OBJECT_HEALTH[entity.type] || 100;
       obj.maxHealth = obj.health;
@@ -374,6 +408,15 @@ function applyDamage(target, damage, attackerTeamId, attackerPlayerId) {
     if (obj.health <= 0) {
       destroyObject(target.hexKey, target.type, target.name, target.teamId, attackerTeamId, attackerPlayerId);
     }
+  } else if (target.isEdgeObject) {
+    const obj = target.data || GameState.edgeObjects[target.edgeKey];
+    if (!obj) return;
+
+    obj.health -= damage;
+
+    if (obj.health <= 0) {
+      destroyEdgeObject(target.edgeKey, target.type, target.name, target.teamId, attackerTeamId, attackerPlayerId);
+    }
   }
 }
 
@@ -429,6 +472,26 @@ function destroyObject(hexKey, type, name, ownerTeamId, attackerTeamId, attacker
   }
 
   delete GameState.hexObjects[hexKey];
+  showNotification(`${name} was destroyed!`);
+}
+
+function destroyEdgeObject(edgeKey, type, name, ownerTeamId, attackerTeamId, attackerPlayerId) {
+  // Track objectsLost per type for the owner team
+  if (ownerTeamId !== undefined && GameState.teams[ownerTeamId]) {
+    const team = GameState.teams[ownerTeamId];
+    if (!team.objectsLost) team.objectsLost = {};
+    team.objectsLost[type] = (team.objectsLost[type] || 0) + 1;
+  }
+
+  // Credit the kill to the attacker (objects count as kills too)
+  if (attackerTeamId !== undefined && attackerPlayerId) {
+    const attacker = GameState.teams[attackerTeamId]?.players[attackerPlayerId];
+    if (attacker) {
+      attacker.kills = (attacker.kills || 0) + 1;
+    }
+  }
+
+  delete GameState.edgeObjects[edgeKey];
   showNotification(`${name} was destroyed!`);
 }
 
@@ -512,6 +575,75 @@ function renderHealthBar(hexKey, currentHealth, maxHealth, yOffset = 35) {
   healthLayer.appendChild(container);
 }
 
+function renderEdgeHealthBar(edgeKey, currentHealth, maxHealth) {
+  // Don't render if at full health
+  if (currentHealth >= maxHealth) return;
+
+  // Parse edge key: "q,r,side"
+  const parts = edgeKey.split(',');
+  const q = parseInt(parts[0]);
+  const r = parseInt(parts[1]);
+  const side = parseInt(parts[2]);
+
+  const hex = new Hex(q, r);
+  const corners = getHexCorners(hex);
+  const p1 = corners[side];
+  const p2 = corners[(side + 1) % 6];
+
+  // Calculate edge center
+  const centerX = (p1.x + p2.x) / 2;
+  const centerY = (p1.y + p2.y) / 2;
+
+  const barWidth = 30;
+  const barHeight = 5;
+  const healthPercent = Math.max(0, currentHealth / maxHealth);
+
+  // Get or create health bar layer (always on top)
+  const svg = document.getElementById('hex-overlay');
+  let healthLayer = document.getElementById('health-bar-layer');
+  if (!healthLayer) {
+    healthLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    healthLayer.id = 'health-bar-layer';
+    svg.appendChild(healthLayer);
+  }
+
+  // Container group
+  const container = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  container.classList.add('health-bar-container');
+  container.setAttribute('data-health-bar', edgeKey);
+
+  // Background
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('x', centerX - barWidth / 2);
+  bg.setAttribute('y', centerY + 15);
+  bg.setAttribute('width', barWidth);
+  bg.setAttribute('height', barHeight);
+  bg.setAttribute('rx', 2);
+  bg.classList.add('health-bar-bg');
+
+  // Health fill
+  const fill = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  fill.setAttribute('x', centerX - barWidth / 2 + 1);
+  fill.setAttribute('y', centerY + 16);
+  fill.setAttribute('width', (barWidth - 2) * healthPercent);
+  fill.setAttribute('height', barHeight - 2);
+  fill.setAttribute('rx', 1);
+  fill.classList.add('health-bar-fill');
+
+  // Color based on health percentage
+  if (healthPercent > 0.6) {
+    fill.classList.add('health-high');
+  } else if (healthPercent > 0.3) {
+    fill.classList.add('health-medium');
+  } else {
+    fill.classList.add('health-low');
+  }
+
+  container.appendChild(bg);
+  container.appendChild(fill);
+  healthLayer.appendChild(container);
+}
+
 function renderAllHealthBars() {
   // Remove existing health bars
   document.querySelectorAll('.health-bar-container').forEach(h => h.remove());
@@ -538,6 +670,13 @@ function renderAllHealthBars() {
       if (player.position && player.health !== undefined && player.maxHealth !== undefined && player.health < player.maxHealth) {
         renderHealthBar(player.position, player.health, player.maxHealth, 35);
       }
+    }
+  }
+
+  // Render for edge objects (walls)
+  for (const [edgeKey, obj] of Object.entries(GameState.edgeObjects)) {
+    if (obj.health !== undefined && obj.maxHealth !== undefined && obj.health < obj.maxHealth) {
+      renderEdgeHealthBar(edgeKey, obj.health, obj.maxHealth);
     }
   }
 }

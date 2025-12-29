@@ -7,7 +7,7 @@ const MAP_WIDTH = 4096;
 const MAP_HEIGHT = 2442;
 
 // Hex grid configuration
-const HEX_SIZE = 36;
+const HEX_SIZE = 20;
 const HEX_ORIGIN_X = 40;
 const HEX_ORIGIN_Y = 40;
 

@@ -44,16 +44,16 @@ const GameState = {
 
   // Teams data: { teamId: { name, color, border, players, objectsLost: { type: count }, reviveCount } }
   teams: {
-    1: { name: 'Team 1', color: 'rgba(255, 0, 0, 0.4)', border: '#ff0000', players: {}, objectsLost: {}, reviveCount: 0 },
-    2: { name: 'Team 2', color: 'rgba(0, 128, 255, 0.4)', border: '#0080ff', players: {}, objectsLost: {}, reviveCount: 0 },
-    3: { name: 'Team 3', color: 'rgba(0, 255, 0, 0.4)', border: '#00ff00', players: {}, objectsLost: {}, reviveCount: 0 },
-    4: { name: 'Team 4', color: 'rgba(255, 255, 0, 0.4)', border: '#ffff00', players: {}, objectsLost: {}, reviveCount: 0 },
-    5: { name: 'Team 5', color: 'rgba(255, 0, 255, 0.4)', border: '#ff00ff', players: {}, objectsLost: {}, reviveCount: 0 },
-    6: { name: 'Team 6', color: 'rgba(0, 255, 255, 0.4)', border: '#00ffff', players: {}, objectsLost: {}, reviveCount: 0 },
-    7: { name: 'Team 7', color: 'rgba(255, 128, 0, 0.4)', border: '#ff8000', players: {}, objectsLost: {}, reviveCount: 0 },
-    8: { name: 'Team 8', color: 'rgba(128, 0, 255, 0.4)', border: '#8000ff', players: {}, objectsLost: {}, reviveCount: 0 },
-    9: { name: 'Team 9', color: 'rgba(255, 128, 128, 0.4)', border: '#ff8080', players: {}, objectsLost: {}, reviveCount: 0 },
-    0: { name: 'Team 10', color: 'rgba(128, 255, 128, 0.4)', border: '#80ff80', players: {}, objectsLost: {}, reviveCount: 0 }
+    1: { name: 'Team 1', color: 'rgba(255, 0, 0, 0.25)', border: 'rgba(255, 0, 0, 0.3)', players: {}, objectsLost: {}, reviveCount: 0 },
+    2: { name: 'Team 2', color: 'rgba(0, 128, 255, 0.25)', border: 'rgba(0, 128, 255, 0.3)', players: {}, objectsLost: {}, reviveCount: 0 },
+    3: { name: 'Team 3', color: 'rgba(0, 255, 0, 0.25)', border: 'rgba(0, 255, 0, 0.3)', players: {}, objectsLost: {}, reviveCount: 0 },
+    4: { name: 'Team 4', color: 'rgba(255, 255, 0, 0.25)', border: 'rgba(255, 255, 0, 0.3)', players: {}, objectsLost: {}, reviveCount: 0 },
+    5: { name: 'Team 5', color: 'rgba(255, 0, 255, 0.25)', border: 'rgba(255, 0, 255, 0.3)', players: {}, objectsLost: {}, reviveCount: 0 },
+    6: { name: 'Team 6', color: 'rgba(0, 255, 255, 0.25)', border: 'rgba(0, 255, 255, 0.3)', players: {}, objectsLost: {}, reviveCount: 0 },
+    7: { name: 'Team 7', color: 'rgba(255, 128, 0, 0.25)', border: 'rgba(255, 128, 0, 0.3)', players: {}, objectsLost: {}, reviveCount: 0 },
+    8: { name: 'Team 8', color: 'rgba(128, 0, 255, 0.25)', border: 'rgba(128, 0, 255, 0.3)', players: {}, objectsLost: {}, reviveCount: 0 },
+    9: { name: 'Team 9', color: 'rgba(255, 128, 128, 0.25)', border: 'rgba(255, 128, 128, 0.3)', players: {}, objectsLost: {}, reviveCount: 0 },
+    0: { name: 'Team 10', color: 'rgba(128, 255, 128, 0.25)', border: 'rgba(128, 255, 128, 0.3)', players: {}, objectsLost: {}, reviveCount: 0 }
   },
 
   // Export state for saving

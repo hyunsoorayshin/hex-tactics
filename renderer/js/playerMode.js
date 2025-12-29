@@ -235,7 +235,7 @@ function addPlayerMarker(hexKey, playerId, playerName, playerGold, teamColor) {
   const centerX = bbox.x + bbox.width / 2;
   const centerY = bbox.y + bbox.height / 2;
 
-  const iconSize = 44;
+  const iconSize = 28;
   const iconX = centerX - iconSize / 2;
   const iconY = centerY - iconSize / 2;
 
@@ -307,21 +307,21 @@ function addPlayerMarker(hexKey, playerId, playerName, playerGold, teamColor) {
   // Player name above icon
   const name = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   name.setAttribute('x', centerX);
-  name.setAttribute('y', iconY - 8);
+  name.setAttribute('y', iconY - 5);
   name.setAttribute('text-anchor', 'middle');
   name.setAttribute('fill', '#fff');
-  name.setAttribute('font-size', '11');
+  name.setAttribute('font-size', '9');
   name.setAttribute('font-weight', 'bold');
   name.classList.add('player-marker-name');
   name.textContent = playerName;
 
   // Name background for readability
   const nameBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  const nameWidth = playerName.length * 7 + 8;
+  const nameWidth = playerName.length * 5 + 6;
   nameBg.setAttribute('x', centerX - nameWidth / 2);
-  nameBg.setAttribute('y', iconY - 20);
+  nameBg.setAttribute('y', iconY - 14);
   nameBg.setAttribute('width', nameWidth);
-  nameBg.setAttribute('height', 14);
+  nameBg.setAttribute('height', 11);
   nameBg.setAttribute('rx', 3);
   nameBg.setAttribute('fill', 'rgba(0, 0, 0, 0.8)');
   nameBg.setAttribute('stroke', teamColor);

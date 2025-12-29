@@ -252,7 +252,7 @@ function addShipMarker(hexKey, teamId, passenger, isSelected) {
   const centerX = bbox.x + bbox.width / 2;
   const centerY = bbox.y + bbox.height / 2;
 
-  const iconSize = 48;
+  const iconSize = 32;
 
   const svg = document.getElementById('hex-overlay');
 

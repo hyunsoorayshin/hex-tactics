@@ -128,7 +128,7 @@ function addBridgeMarker(hexKey, teamId, rotation) {
   const centerX = bbox.x + bbox.width / 2;
   const centerY = bbox.y + bbox.height / 2;
 
-  const iconSize = 72;  // Large enough to fill hex
+  const iconSize = 48;  // Sized for HEX_SIZE 20
 
   const svg = document.getElementById('hex-overlay');
 

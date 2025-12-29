@@ -206,7 +206,7 @@ function addWallMarker(edgeKey, teamId) {
   // Wall image - sized to fit edge length
   const edgeLength = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
   const iconWidth = edgeLength;
-  const iconHeight = 24;
+  const iconHeight = 16;
 
   const icon = document.createElementNS('http://www.w3.org/2000/svg', 'image');
   icon.setAttribute('href', '../assets/edge-objects/wall.png');

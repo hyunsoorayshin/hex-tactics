@@ -22,8 +22,8 @@ const OBJECT_COSTS = {
   castle: 5000
 };
 
-// Icon sizes: small=28, medium=48, large=64, xlarge=100
-const ICON_SIZE_SMALL = 28;
+// Icon sizes: small=34, medium=48, large=64, xlarge=100
+const ICON_SIZE_SMALL = 34;
 const ICON_SIZE_MEDIUM = 48;
 const ICON_SIZE_LARGE = 64;
 const ICON_SIZE_XLARGE = 100;

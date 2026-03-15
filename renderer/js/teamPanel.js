@@ -211,12 +211,20 @@ function renderPlayerList() {
     return;
   }
 
-  playerList.innerHTML = players.map(([playerId, player]) => `
+  playerList.innerHTML = players.map(([playerId, player]) => {
+    const stats = getPlayerStats(player.gold || 0);
+    const rank = getPlayerRank(player.gold || 0);
+    const nextLevelGold = getGoldForLevel(stats.level + 1);
+    return `
     <div class="player-item" data-player-id="${playerId}">
       <input type="text" class="player-name" value="${player.name}">
       <div class="player-gold">
         <span class="player-gold-icon">&#9733;</span>
         <input type="number" class="player-gold-input" value="${player.gold}" min="0">
+      </div>
+      <div class="player-level-row">
+        <span class="player-level-badge" title="${rank.name}">Lv.${stats.level}</span>
+        <span class="player-level-detail" title="Next level at ${nextLevelGold}g">HP:${stats.health} ATK:${stats.attack}</span>
       </div>
       <div class="player-stats-row">
         <span class="player-stat-badge kills" title="Kills">${player.kills || 0}K</span>
@@ -225,7 +233,8 @@ function renderPlayerList() {
       </div>
       <button class="player-remove">&times;</button>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   // Attach event listeners (CSP blocks inline handlers)
   players.forEach(([playerId]) => {

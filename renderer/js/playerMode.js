@@ -16,16 +16,20 @@ const RANKS = [
   { min: 10000, max: Infinity, name: 'King', icon: 'king.png' }
 ];
 
-// Combat stats by rank
-const RANK_STATS = {
-  'Peasant': { health: 20, attack: 10 },
-  'Farmer': { health: 30, attack: 15 },
-  'Merchant': { health: 40, attack: 20 },
-  'Knight': { health: 60, attack: 30 },
-  'Grand Knight': { health: 80, attack: 45 },
-  'Baron': { health: 100, attack: 60 },
-  'King': { health: 150, attack: 80 }
-};
+// Level system: gold acts as XP with increasing cost per level
+// Total gold for level L = L × (L-1) × 50  (triangular scaling)
+// Level 1: 0g, Level 2: 100g, Level 3: 300g, Level 5: 1000g, Level 10: 4500g, Level 15: 10500g
+function getPlayerLevel(gold) {
+  // Solve: gold >= level * (level - 1) * 50
+  // level^2 - level - gold/50 <= 0
+  // level = floor((1 + sqrt(1 + 4 * gold/50)) / 2)
+  return Math.max(1, Math.floor((1 + Math.sqrt(1 + 4 * gold / 50)) / 2));
+}
+
+// Gold required to reach a given level
+function getGoldForLevel(level) {
+  return level * (level - 1) * 50;
+}
 
 function getPlayerRank(gold) {
   for (const rank of RANKS) {
@@ -36,10 +40,15 @@ function getPlayerRank(gold) {
   return RANKS[0];
 }
 
-// Get player combat stats based on gold
+// Get player combat stats based on gold (level-scaled)
+// Health = 10 + (level × 3), Attack = 5 + (level × 2)
 function getPlayerStats(gold) {
-  const rank = getPlayerRank(gold);
-  return RANK_STATS[rank.name] || RANK_STATS['Peasant'];
+  const level = getPlayerLevel(gold);
+  return {
+    health: 10 + (level * 3),
+    attack: 5 + (level * 2),
+    level: level
+  };
 }
 
 function isPlayerMode() {

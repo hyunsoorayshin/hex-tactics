@@ -703,6 +703,27 @@ html, body {
   margin-left: auto;
 }
 
+.player-level-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.player-level-badge {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  background: rgba(200, 170, 50, 0.3);
+  color: var(--gold);
+  border: 1px solid rgba(200, 170, 50, 0.5);
+}
+
+.player-level-detail {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
 .player-stat-badge {
   font-size: 10px;
   font-weight: bold;

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Rayhaven is an Electron-based game for students featuring a hex-grid map with team-based land ownership, object placement, and player management.
+Rayhaven is an Electron-based game for students featuring a hex-grid map with team-based land ownership, object placement, and player management. Students earn gold through academic performance (managed via CSV import script), which determines their level and combat stats.
 
 ## Project Structure
 
@@ -14,11 +14,13 @@ rayhaven2/
 ├── ARCHITECTURE.md
 ├── .gitignore
 ├── saves/                  # Save files (git-ignored)
+│   ├── CSV/                # Student grade CSVs (per class)
+│   └── update_gold.py      # CSV → save file gold updater
 ├── assets/
 │   ├── hex-objects/        # Objects placeable on hexes
 │   ├── edge-objects/       # Objects placeable on edges
 │   ├── mascots/            # Team mascot images (team1.png - team10.png)
-│   └── icons/              # Rank icons (peasant.png, farmer.png, etc.)
+│   └── icons/              # Rank icons (recruit.png, private.png, etc.)
 └── renderer/
     ├── index.html          # Main window HTML (minimal structure)
     ├── renderer.js         # Entry point, keyboard controls
@@ -26,10 +28,10 @@ rayhaven2/
     ├── css/
     │   └── theme.css       # Fantasy theme (black & gold palette)
     └── js/
-        ├── gameState.js    # State management
+        ├── gameState.js    # State management, constants
         ├── landMode.js     # Land ownership mode
-        ├── playerMode.js   # Player placement mode
-        ├── castleMode.js   # Castle placement (7-hex territory)
+        ├── playerMode.js   # Player placement, level system, ranks
+        ├── castleMode.js   # Castle placement (19-hex territory)
         ├── bridgeMode.js   # Bridge placement with rotation
         ├── armyMode.js     # Army placement on owned land
         ├── townMode.js     # Town placement on owned land
@@ -66,20 +68,24 @@ Secure IPC bridge exposing `window.gameAPI`:
 ### Renderer Modules
 
 #### `gameState.js`
-Core state management:
+Core state management and constants:
 - `GameState` - Central state object containing:
   - `hexObjects` - Objects on hexes (with health values)
   - `edgeObjects` - Objects on edges (with health values)
   - `land` - Hex ownership by team
   - `attacks` - Attack placements
-  - `teams` - Team data (name, color, border, players, objectsLost, reviveCount)
+  - `teams` - Team data (name, color, border, outline, players, objectsLost, reviveCount)
 - `OBJECT_HEALTH` - Health constants for all object types
 - `OBJECT_COSTS` - Gold costs for all object types
+- `ICON_SIZE` - Centralized icon sizes (small/medium/large/xlarge)
+- `getHealthBarOffset(type)` - Auto-calculates health bar position from icon size
+- `HONOR_GOLD` - Honor/dishonor modifier (50g per point)
+- `getEffectiveGold(player)` - Base gold + honor bonuses - dishonor penalties
 - `REVIVE_COST` - Cost per player revive (10g)
 - Current team selection state
 - Helper functions:
   - `getCurrentTeam()`, `setCurrentTeam()`
-  - `getTeamGold()` - Sum of all player gold (merit points)
+  - `getTeamGold()` - Sum of all player effective gold (merit points)
   - `getTeamObjectsCost()` - Cost of currently placed objects
   - `getTeamLostObjectsCost()` - Cost of destroyed objects
   - `getTeamReviveCost()` - Total revive costs
@@ -95,21 +101,26 @@ Land ownership system:
 - Exports: `isLandMode()`, `setLandMode()`, `toggleLandMode()`, `renderLand()`
 
 #### `playerMode.js`
-Player placement system:
+Player placement and level system:
 - Player mode state and toggle functions
 - Side panel for selecting players from current team
 - `onPlayerModeHexClick()` - Places selected player on clicked hex
-- `renderPlayerMarkers()` - Draws player markers on map
-- `addPlayerMarker()` - Creates SVG marker with rank icon and team color border
-- Rank system based on gold (Peasant → Farmer → Merchant → Knight → Grand Knight → Baron → King)
-- `RANK_STATS` - Health and attack values for each rank
-- `getPlayerStats(gold)` - Returns health/attack based on gold amount
-- Rank icons: PNG files in `assets/icons/` with team color outline
+- `renderPlayerMarkers()` - Draws player markers on map (level + name + rank icon)
+- `addPlayerMarker()` - Creates SVG marker with rank icon and team color outline
+- **Level System:**
+  - `getPlayerLevel(gold)` - Triangular XP curve (each level costs more gold)
+  - `getGoldForLevel(level)` - Gold threshold: `level × (level-1) × 50`
+  - `getPlayerStats(gold)` - Returns `{ health: 10 + level×5, attack: 5 + level×3, level }`
+  - `refreshAllPlayerStats()` - Recalculates all player stats, scales health proportionally
+- **Military Rank Tiers** (based on level, determines icon):
+  - Recruit (Lv 1-2), Private (Lv 3-4), Sergeant (Lv 5-7), Captain (Lv 8-10)
+  - Commander (Lv 11-14), General (Lv 15-19), Marshal (Lv 20-29)
+  - Warlord (Lv 30-39), Conqueror (Lv 40-49), Overlord (Lv 50+)
 - **Death/Revival System:**
   - Dead players shown with skull icon and "Dead" status in panel
   - Dead players can only be placed at team's own town or castle
-  - Revival restores full health based on rank and increments revive counter
-- Exports: `isPlayerMode()`, `setPlayerMode()`, `togglePlayerMode()`, `renderPlayerMarkers()`, `getPlayerStats()`
+  - Revival restores full health based on level and increments revive counter
+- Exports: `isPlayerMode()`, `setPlayerMode()`, `togglePlayerMode()`, `renderPlayerMarkers()`, `getPlayerStats()`, `getPlayerLevel()`, `getGoldForLevel()`, `getPlayerRank()`, `refreshAllPlayerStats()`
 
 #### `castleMode.js`
 Castle placement system (upgrade from town):
@@ -121,7 +132,7 @@ Castle placement system (upgrade from town):
 - `placeCastle()` - Upgrades town to castle, marks all 18 neighbors as castle-territory
 - `removeCastle()` - Removes castle center only (territory hexes remain)
 - `renderCastles()` - Draws castle markers with team-specific images
-- Health: 350 HP (requires 4-5 King attacks)
+- Health: 350 HP
 - Uses team-colored castle images (`castle1.png` - `castle10.png`)
 - **Housing System:**
   - Shift+click empty castle → housing mode → click player → player housed (healed to full)
@@ -138,7 +149,7 @@ Bridge placement system:
 - `placeBridge()` / `removeBridge()` - Manage bridge state
 - `rotateBridge()` - Cycles through 0°, 60°, 120° orientations
 - `renderBridges()` - Draws bridge markers with team color outline
-- Health: 75 HP
+- Health: 40 HP
 - Exports: `isBridgeMode()`, `setBridgeMode()`, `toggleBridgeMode()`, `renderBridges()`
 
 #### `armyMode.js`
@@ -146,8 +157,8 @@ Army placement system:
 - Requires placement on team's owned land
 - `placeArmy()` / `removeArmy()` - Manage army state
 - `renderArmies()` - Draws army markers with team color outline
-- Uses SVG filter for team-colored border around PNG icon
-- Health: 250 HP
+- Uses SVG filter for team-colored border around icon
+- Health: 100 HP
 - Exports: `isArmyMode()`, `setArmyMode()`, `toggleArmyMode()`, `renderArmies()`
 
 #### `townMode.js`
@@ -157,7 +168,7 @@ Town placement system (territory-based):
 - `placeTown()` - Creates town center and marks 6 neighbors as town-territory
 - `removeTown()` - Removes town and all associated territory
 - `renderTowns()` - Draws town markers with team color outline
-- Uses SVG filter for team-colored border around PNG icon
+- Uses SVG filter for team-colored border around icon
 - Health: 120 HP
 - Can be upgraded to castle (see castleMode.js)
 - **Housing System:**
@@ -175,7 +186,7 @@ Wall placement system (edge objects):
 - `placeWall()` / `removeWall()` - Manage wall state in `edgeObjects`
 - `addWallMarker()` - Calculates edge position/rotation from hex corners
 - Uses SVG filter for team-colored border
-- Health: 100 HP
+- Health: 50 HP
 - Exports: `isWallMode()`, `setWallMode()`, `toggleWallMode()`, `renderWalls()`
 
 #### `shipMode.js`
@@ -183,8 +194,8 @@ Ship placement and passenger transport system:
 - Can be placed on any hex (no land ownership requirement)
 - `placeShip()` / `removeShip()` - Manage ship state
 - `renderShips()` - Draws ship markers with team color outline
-- Uses SVG filter for team-colored border around PNG icon
-- Health: 100 HP (passenger dies if ship destroyed)
+- Uses SVG filter for team-colored border around icon
+- Health: 60 HP (passenger dies if ship destroyed)
 - **Boarding/Disembarking System:**
   - Shift+click empty ship → boarding mode → click player hex → player boards
   - Shift+click ship with passenger → disembarking mode → click hex → player lands
@@ -213,7 +224,7 @@ Combat system with health tracking:
   - Player kills: Incremented when player kills enemy player or destroys object
   - Player deaths: Incremented when player is killed (not removed, can revive)
   - Team objectsLost: Incremented when team's object is destroyed
-- `renderHealthBar()` / `renderAllHealthBars()` - Visual health indicators (below object, on top layer)
+- `renderHealthBar()` / `renderAllHealthBars()` - Visual health indicators (below object, auto-offset via `getHealthBarOffset`)
 - Red pulse animation on selected attacker
 - Exports: `isBattleMode()`, `setBattleMode()`, `toggleBattleMode()`, `clearBattleSelection()`, `getBattlePhase()`, `renderAllHealthBars()`
 
@@ -250,15 +261,18 @@ Map navigation:
 #### `teamPanel.js`
 Team management UI:
 - Creates panel HTML dynamically via `createTeamPanelHTML()`
-- Modal panel opened with Tab key
+- Modal panel opened with Tab key (widened to 550-700px)
 - **Team Stats Display:**
-  - Merit Points (sum of player gold - never touched)
+  - Merit Points (sum of all player effective gold)
   - Available Gold (merit points - object costs - lost object costs - revive costs)
   - Land count
 - **Asset Counts:** Castle, Wall, Town, Army, Ship, Bridge
   - Shows count with lost in parentheses: `2 (1)` = 2 present, 1 lost
 - **Player List:**
-  - Name (editable), gold (editable)
+  - Name (editable), effective gold display (base gold managed by CSV script)
+  - Level badge with HP/ATK stats
+  - Honor/dishonor buttons (+/-50g per point)
+  - H/D badges (Honor, Dishonor counts)
   - K/D/R badges (Kills, Deaths, Revives)
   - Add/remove players (uses addEventListener for CSP compliance)
 - Exports: `initTeamPanel()`, `openTeamPanel()`, `closeTeamPanel()`, `toggleTeamPanel()`, `updateTeamPanel()`, `isTeamPanelOpen()`
@@ -277,6 +291,7 @@ UI utilities:
 #### `renderer.js`
 Application entry point:
 - `initApp()` - Initializes all modules in order
+- Keyboard shortcuts bypass when focused on input/textarea (except Escape/Tab)
 - Keyboard event handlers:
   - `Escape` - Close panel / reset view / cancel selection / exit mode
   - `Space` - Pan mode
@@ -290,6 +305,7 @@ Application entry point:
   - `S` - Toggle ship mode
   - `X` - Toggle battle mode
   - `M` - Toggle move mode
+  - `R` - Refresh all player stats
   - `Shift+1-0` - Select team
   - `Tab` - Toggle team panel
 
@@ -300,10 +316,30 @@ Fantasy theme with black & gold palette:
 - CSS custom properties (variables) for colors, spacing, typography
 - Base styles: reset, body, scrollbar
 - Component styles: hex grid, status bar, notifications, team panel
+- Player level badge styles (gold themed)
+- Honor/dishonor button and badge styles
 - Health bar styles with color-coded damage states (green/yellow/red)
 - Battle mode animation (red pulse on selected attacker)
 - Move mode animation (blue pulse on selected object)
 - All styling centralized here (no inline styles in HTML)
+
+### Gold Management
+
+#### `saves/update_gold.py`
+External script for importing student grades as gold:
+- Reads CSV grade sheets from `saves/CSV/` (one per class, G5/G6)
+- G5 subjects: Voc Test, Sci Test, Sci HW, Read, Gram Test, Novel
+- G6 subjects: Voc Test, Sci HW, Sci Test, TFL Listening, Novel
+- Per date row: averages scored subjects, applies bonuses/penalties
+- **Bonuses:**
+  - +50 per 100-score on Voc Test, Sci HW, Novel, Gram Test
+  - Grand Slam: Voc Test + Sci HW + Novel all 100 = +300 extra
+  - Perfect Slam: All major test subjects 100 = +500 extra
+- **Penalties:**
+  - Voc Test: <80 = -40, <70 = -60, <60 = -80, <50 = -100
+  - Novel < 50 = -50
+- Matches students to save file by Korean name
+- Writes updated gold to save JSON (preserves honor/dishonor)
 
 ## Script Load Order
 
@@ -322,7 +358,7 @@ Scripts must load in this order (defined in `index.html`):
 11. `moveMode.js` - Depends on: gameState
 12. `hexGrid.js` - Depends on: gameState, all mode modules
 13. `panZoom.js` - Depends on: hexGrid (MAP_WIDTH/HEIGHT)
-14. `teamPanel.js` - Depends on: gameState
+14. `teamPanel.js` - Depends on: gameState, playerMode
 15. `saveLoad.js` - Depends on: gameState, all mode modules, ui, battleMode (renderAllHealthBars)
 16. `ui.js` - Depends on: gameState, all mode modules
 17. `renderer.js` - Depends on: all modules
@@ -351,6 +387,17 @@ User: Cmd+O
   → renderer: showNotification
 ```
 
+### Gold Update Flow
+```
+Teacher updates CSV grades
+  → Run: python3 saves/update_gold.py
+  → Script reads CSV files from saves/CSV/
+  → Computes gold per student (avg + bonuses - penalties)
+  → Updates save JSON (preserves honor/dishonor, kills, deaths, etc.)
+  → Load updated save in game
+  → Press R to refresh player stats
+```
+
 ## Keyboard Controls
 
 | Key | Action |
@@ -368,6 +415,7 @@ User: Cmd+O
 | S | Toggle ship mode |
 | X | Toggle battle mode |
 | M | Toggle move mode |
+| R | Refresh all player stats |
 | Shift + Click (ship) | Board/disembark player |
 | Shift + Click (town/castle) | House/evict player |
 | Cmd + Click | Remove object (in placement modes) |
@@ -408,7 +456,8 @@ GameState = {
     teamId: {
       name: string,
       color: string,       // rgba fill color for land
-      border: string,      // hex color for borders/outlines
+      border: string,      // rgba color for land borders
+      outline: string,     // solid hex color for icon outlines
       objectsLost: {       // Count of team's objects destroyed by type
         castle: number,
         town: number,
@@ -421,10 +470,12 @@ GameState = {
       players: {
         playerId: {
           name: string,
-          gold: number,
+          gold: number,       // Base gold (from CSV import)
+          honor: number,      // Honor points (+50g each)
+          dishonor: number,   // Dishonor points (-50g each)
           position: "q,r" | null,
-          health: number,     // Current health (derived from rank)
-          maxHealth: number,  // Max health (derived from rank)
+          health: number,     // Current health (derived from level)
+          maxHealth: number,  // Max health (derived from level)
           isDead: boolean,    // Dead flag for UI
           kills: number,      // Enemy players/objects killed
           deaths: number,     // Times died
@@ -436,6 +487,60 @@ GameState = {
 }
 ```
 
+## Level System
+
+Gold acts as XP with a triangular scaling curve. Each level requires more gold than the last.
+
+**Formula:** `Gold for Level L = L × (L-1) × 50`
+
+**Effective Gold:** `base gold + (honor × 50) - (dishonor × 50)`
+
+### Level Thresholds
+
+| Level | Gold Required |
+|-------|--------------|
+| 1 | 0 |
+| 2 | 100 |
+| 3 | 300 |
+| 5 | 1,000 |
+| 10 | 4,500 |
+| 15 | 10,500 |
+| 20 | 19,000 |
+| 30 | 43,500 |
+| 50 | 122,500 |
+
+### Combat Stats per Level
+
+- **Health** = 10 + (level × 5)
+- **Attack** = 5 + (level × 3)
+
+| Level | HP | ATK |
+|-------|----|-----|
+| 1 | 15 | 8 |
+| 5 | 35 | 20 |
+| 10 | 60 | 35 |
+| 15 | 85 | 50 |
+| 20 | 110 | 65 |
+| 30 | 160 | 95 |
+| 50 | 260 | 155 |
+
+## Military Rank System
+
+Ranks determine the player's icon and are based on level:
+
+| Rank | Level Range | Icon |
+|------|------------|------|
+| Recruit | 1-2 | recruit.png |
+| Private | 3-4 | private.png |
+| Sergeant | 5-7 | sergeant.png |
+| Captain | 8-10 | captain.png |
+| Commander | 11-14 | commander.png |
+| General | 15-19 | general.png |
+| Marshal | 20-29 | marshal.png |
+| Warlord | 30-39 | warlord.png |
+| Conqueror | 40-49 | conqueror.png |
+| Overlord | 50+ | overlord.png |
+
 ## Economy System
 
 Team gold is calculated as:
@@ -444,53 +549,31 @@ Available Gold = Merit Points - Present Objects Cost - Lost Objects Cost - Reviv
 ```
 
 Where:
-- **Merit Points** = Sum of all player gold (never modified by the game)
+- **Merit Points** = Sum of all player effective gold
+- **Effective Gold** = Base gold (from CSV) + honor×50 - dishonor×50
 - **Present Objects Cost** = Sum of costs for all currently placed objects
 - **Lost Objects Cost** = Sum of costs for all destroyed objects
 - **Revive Costs** = reviveCount × 10g
 
-## Rank System
-
-Player ranks are determined by their gold amount:
-
-| Gold Range | Rank | Icon |
-|------------|------|------|
-| 0-99 | Peasant | peasant.png |
-| 100-999 | Farmer | farmer.png |
-| 1000-1999 | Merchant | merchant.png |
-| 2000-4999 | Knight | knight.png |
-| 5000-7999 | Grand Knight | grandknight.png |
-| 8000-9999 | Baron | baron.png |
-| 10000+ | King | king.png |
-
-## Combat Stats
-
-### Player Stats by Rank
-
-| Rank | Gold Range | Health | Attack |
-|------|------------|--------|--------|
-| Peasant | 0-99 | 20 | 10 |
-| Farmer | 100-999 | 30 | 15 |
-| Merchant | 1000-1999 | 40 | 20 |
-| Knight | 2000-4999 | 60 | 30 |
-| Grand Knight | 5000-7999 | 80 | 45 |
-| Baron | 8000-9999 | 100 | 60 |
-| King | 10000+ | 150 | 80 |
-
 ### Object Health & Cost
 
-| Object | Health | Cost |
-|--------|--------|------|
-| Bridge | 40 | 50g |
-| Wall | 50 | 25g |
-| Ship | 60 | 75g |
-| Army | 100 | 100g |
-| Town | 120 | 1,000g |
-| Castle | 350 | 5,000g |
+| Object | Health | Cost | Icon Size |
+|--------|--------|------|-----------|
+| Bridge | 40 | 50g | Medium (48px) |
+| Wall | 50 | 25g | — (edge) |
+| Ship | 60 | 75g | Small (28px) |
+| Army | 100 | 100g | Small (28px) |
+| Town | 120 | 1,000g | Large (64px) |
+| Castle | 350 | 5,000g | XLarge (100px) |
 
-### Revive Cost
+### Icon Size Tiers
 
-- **10g** per player revive (deducted from team available gold)
+| Tier | Size | Types |
+|------|------|-------|
+| Small | 28px | Player, Army, Ship |
+| Medium | 48px | Bridge |
+| Large | 64px | Town |
+| XLarge | 100px | Castle |
 
 ### Combat Rules
 
@@ -502,6 +585,25 @@ Player ranks are determined by their gold amount:
 - **Ship Destruction**: Passenger dies with the ship
 - **Player Death**: Player marked as dead (not removed), can revive at own town/castle
 - **Object Removal**: Cmd+click to remove objects (prevents accidental deletion)
+
+### Revive Cost
+
+- **10g** per player revive (deducted from team available gold)
+
+## Team Colors
+
+| Team | Color | Outline |
+|------|-------|---------|
+| 1 | Red | #ff0000 |
+| 2 | Blue | #0066ff |
+| 3 | Green | #00cc00 |
+| 4 | Yellow | #ffdd00 |
+| 5 | Purple | #cc00cc |
+| 6 | Teal | #00cccc |
+| 7 | Orange | #ff8800 |
+| 8 | Brown | #aa6633 |
+| 9 | Hot Pink | #ff4488 |
+| 10 | Olive | #88aa00 |
 
 ## Building Requirements
 
@@ -533,6 +635,8 @@ CC = Castle center (was town)
 
 ## Future Considerations
 
+- Army attack capability in battle mode
+- SVG icons to replace PNG + filter approach
 - Undo/redo system
 - Multiple map support
 - Additional object types

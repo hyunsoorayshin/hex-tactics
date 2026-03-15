@@ -244,7 +244,7 @@ function addPlayerMarker(hexKey, playerId, playerName, playerGold, teamColor) {
   const centerX = bbox.x + bbox.width / 2;
   const centerY = bbox.y + bbox.height / 2;
 
-  const iconSize = 28;
+  const iconSize = ICON_SIZE.player;
   const iconX = centerX - iconSize / 2;
   const iconY = centerY - iconSize / 2;
 

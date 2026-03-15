@@ -294,7 +294,7 @@ function addTownMarker(hexKey, teamId, housed, isSelected) {
   const centerX = bbox.x + bbox.width / 2;
   const centerY = bbox.y + bbox.height / 2;
 
-  const iconSize = 64;
+  const iconSize = ICON_SIZE.town;
 
   const svg = document.getElementById('hex-overlay');
 

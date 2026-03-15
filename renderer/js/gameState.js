@@ -22,6 +22,27 @@ const OBJECT_COSTS = {
   castle: 5000
 };
 
+// Icon sizes: small=28, medium=48, large=64, xlarge=100
+const ICON_SIZE_SMALL = 28;
+const ICON_SIZE_MEDIUM = 48;
+const ICON_SIZE_LARGE = 64;
+const ICON_SIZE_XLARGE = 100;
+
+const ICON_SIZE = {
+  player: ICON_SIZE_SMALL,
+  army: ICON_SIZE_SMALL,
+  ship: ICON_SIZE_SMALL,
+  bridge: ICON_SIZE_MEDIUM,
+  town: ICON_SIZE_LARGE,
+  castle: ICON_SIZE_XLARGE
+};
+
+// Health bar offset: 5px below bottom edge of centered icon
+const HEALTH_BAR_GAP = 5;
+function getHealthBarOffset(type) {
+  return (ICON_SIZE[type] || 32) / 2 + HEALTH_BAR_GAP;
+}
+
 // Revive cost per player
 const REVIVE_COST = 10;
 

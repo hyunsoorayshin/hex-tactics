@@ -390,7 +390,7 @@ function addCastleMarker(hexKey, teamId, housed, isSelected) {
   const centerY = bbox.y + bbox.height / 2;
 
   // Castle icon size (spans multiple hexes, so larger)
-  const iconSize = 100;
+  const iconSize = ICON_SIZE.castle;
   const iconX = centerX - iconSize / 2;
   const iconY = centerY - iconSize / 2;
 

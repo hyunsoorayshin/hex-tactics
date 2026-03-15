@@ -514,7 +514,7 @@ function highlightAttacker(hexKey) {
 // Health Bar Rendering
 // ============================================
 
-function renderHealthBar(hexKey, currentHealth, maxHealth, yOffset = 35) {
+function renderHealthBar(hexKey, currentHealth, maxHealth, yOffset) {
   // Don't render if at full health
   if (currentHealth >= maxHealth) return;
 
@@ -659,8 +659,7 @@ function renderAllHealthBars() {
   for (const [hexKey, obj] of Object.entries(GameState.hexObjects)) {
     if (obj.health !== undefined && obj.maxHealth !== undefined && obj.health < obj.maxHealth) {
       // Use larger offset for castle since it's bigger
-      const yOffset = obj.type === 'castle' ? 55 : 35;
-      renderHealthBar(hexKey, obj.health, obj.maxHealth, yOffset);
+      renderHealthBar(hexKey, obj.health, obj.maxHealth, getHealthBarOffset(obj.type));
     }
   }
 
@@ -668,7 +667,7 @@ function renderAllHealthBars() {
   for (const [teamId, team] of Object.entries(GameState.teams)) {
     for (const [playerId, player] of Object.entries(team.players || {})) {
       if (player.position && player.health !== undefined && player.maxHealth !== undefined && player.health < player.maxHealth) {
-        renderHealthBar(player.position, player.health, player.maxHealth, 35);
+        renderHealthBar(player.position, player.health, player.maxHealth, getHealthBarOffset('player'));
       }
     }
   }

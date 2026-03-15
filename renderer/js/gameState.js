@@ -43,6 +43,17 @@ function getHealthBarOffset(type) {
   return (ICON_SIZE[type] || 32) / 2 + HEALTH_BAR_GAP;
 }
 
+// Honor/Dishonor gold modifier per point
+const HONOR_GOLD = 50;
+
+// Get effective gold: base gold + honor bonuses - dishonor penalties
+function getEffectiveGold(player) {
+  const base = player.gold || 0;
+  const honorBonus = (player.honor || 0) * HONOR_GOLD;
+  const dishonorPenalty = (player.dishonor || 0) * HONOR_GOLD;
+  return Math.max(0, base + honorBonus - dishonorPenalty);
+}
+
 // Revive cost per player
 const REVIVE_COST = 10;
 
@@ -118,11 +129,11 @@ const GameState = {
     return Object.values(this.land).filter(t => t === teamId).length;
   },
 
-  // Get team's total gold (sum of all player gold) - this is merit points
+  // Get team's total gold (sum of all player effective gold) - this is merit points
   getTeamGold(teamId) {
     const team = this.teams[teamId];
     if (!team || !team.players) return 0;
-    return Object.values(team.players).reduce((sum, p) => sum + (p.gold || 0), 0);
+    return Object.values(team.players).reduce((sum, p) => sum + getEffectiveGold(p), 0);
   },
 
   // Get cost of team's currently placed objects

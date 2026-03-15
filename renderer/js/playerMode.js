@@ -41,12 +41,12 @@ function getPlayerRank(gold) {
 }
 
 // Get player combat stats based on gold (level-scaled)
-// Health = 10 + (level × 3), Attack = 5 + (level × 2)
+// Health = 10 + (level × 5), Attack = 5 + (level × 3)
 function getPlayerStats(gold) {
   const level = getPlayerLevel(gold);
   return {
-    health: 10 + (level * 3),
-    attack: 5 + (level * 2),
+    health: 10 + (level * 5),
+    attack: 5 + (level * 3),
     level: level
   };
 }
@@ -58,7 +58,7 @@ function refreshAllPlayerStats() {
     for (const [playerId, player] of Object.entries(team.players || {})) {
       if (player.isDead) continue;
 
-      const stats = getPlayerStats(player.gold || 0);
+      const stats = getPlayerStats(getEffectiveGold(player));
       const oldMax = player.maxHealth || stats.health;
       const newMax = stats.health;
 
@@ -208,7 +208,7 @@ function onPlayerModeHexClick(hexKey, element) {
     }
 
     // Revive the player
-    const stats = getPlayerStats(player.gold);
+    const stats = getPlayerStats(getEffectiveGold(player));
     player.health = stats.health;
     player.maxHealth = stats.health;
     player.isDead = false;
@@ -247,7 +247,7 @@ function renderPlayerMarkers() {
   for (const [teamId, team] of Object.entries(GameState.teams)) {
     for (const [playerId, player] of Object.entries(team.players || {})) {
       if (player.position) {
-        addPlayerMarker(player.position, playerId, player.name, player.gold || 0, team.border);
+        addPlayerMarker(player.position, playerId, player.name, getEffectiveGold(player), team.border);
       }
     }
   }

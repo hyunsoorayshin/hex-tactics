@@ -33,6 +33,12 @@ function initApp() {
 // ============================================
 
 window.addEventListener('keydown', (e) => {
+  // Allow typing in input/textarea fields (except Escape and Tab)
+  const tag = e.target.tagName;
+  if ((tag === 'INPUT' || tag === 'TEXTAREA') && e.key !== 'Escape' && e.key !== 'Tab') {
+    return;
+  }
+
   // Escape - reset view or close panel
   if (e.key === 'Escape') {
     if (isTeamPanelOpen()) {

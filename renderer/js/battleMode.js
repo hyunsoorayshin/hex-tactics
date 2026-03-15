@@ -204,7 +204,7 @@ function selectAttacker(hexKey, attacker) {
 
 function getAttackerStats(attacker) {
   if (attacker.type === 'player') {
-    const stats = getPlayerStats(attacker.player.gold);
+    const stats = getPlayerStats(getEffectiveGold(attacker.player));
     const currentHealth = attacker.player.health !== undefined ? attacker.player.health : stats.health;
     return {
       attack: stats.attack,
@@ -212,7 +212,7 @@ function getAttackerStats(attacker) {
       maxHealth: stats.health
     };
   } else if (attacker.type === 'ship_with_passenger') {
-    const stats = getPlayerStats(attacker.passengerData.gold);
+    const stats = getPlayerStats(getEffectiveGold(attacker.passengerData));
     const currentHealth = attacker.passengerData.health !== undefined ? attacker.passengerData.health : stats.health;
     return {
       attack: stats.attack,
@@ -225,7 +225,7 @@ function getAttackerStats(attacker) {
 
 function getTargetStats(target) {
   if (target.type === 'player') {
-    const stats = getPlayerStats(target.player.gold);
+    const stats = getPlayerStats(getEffectiveGold(target.player));
     const currentHealth = target.player.health !== undefined ? target.player.health : stats.health;
     return {
       attack: stats.attack,
@@ -318,14 +318,14 @@ function initializeHealth(entity) {
   if (entity.type === 'player') {
     const player = entity.player || GameState.teams[entity.teamId]?.players[entity.playerId];
     if (player && player.health === undefined) {
-      const stats = getPlayerStats(player.gold);
+      const stats = getPlayerStats(getEffectiveGold(player));
       player.health = stats.health;
       player.maxHealth = stats.health;
     }
   } else if (entity.type === 'ship_with_passenger') {
     const passenger = entity.passengerData;
     if (passenger && passenger.health === undefined) {
-      const stats = getPlayerStats(passenger.gold);
+      const stats = getPlayerStats(getEffectiveGold(passenger));
       passenger.health = stats.health;
       passenger.maxHealth = stats.health;
     }

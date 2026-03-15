@@ -276,8 +276,8 @@ html, body {
   background: var(--bg-dark);
   border: 2px solid var(--team-color, var(--gold-dark));
   border-radius: var(--radius-lg);
-  min-width: 450px;
-  max-width: 550px;
+  min-width: 550px;
+  max-width: 700px;
   max-height: 80vh;
   z-index: 2000;
   display: none;
@@ -675,26 +675,10 @@ html, body {
   font-size: 14px;
 }
 
-.player-gold-input {
-  width: 70px;
-  background: rgba(212, 175, 55, 0.1);
-  border: 1px solid var(--gold-dark);
+.player-gold-value {
   color: var(--gold-light);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--radius-sm);
   font-size: 14px;
-  text-align: right;
-  transition: all var(--transition-fast);
-}
-
-.player-gold-input:hover {
-  background: rgba(212, 175, 55, 0.15);
-}
-
-.player-gold-input:focus {
-  outline: none;
-  border-color: var(--gold);
-  background: rgba(212, 175, 55, 0.2);
+  font-weight: bold;
 }
 
 .player-stats-row {
@@ -722,6 +706,52 @@ html, body {
 .player-level-detail {
   font-size: 9px;
   color: var(--text-muted);
+}
+
+.player-honor-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.honor-btn {
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.honor-btn.honor {
+  color: var(--gold);
+}
+
+.honor-btn.honor:hover {
+  background: rgba(200, 170, 50, 0.2);
+  border-color: rgba(200, 170, 50, 0.5);
+}
+
+.honor-btn.dishonor {
+  color: #ff6b6b;
+}
+
+.honor-btn.dishonor:hover {
+  background: rgba(220, 50, 50, 0.2);
+  border-color: rgba(220, 50, 50, 0.5);
+}
+
+.player-stat-badge.honor {
+  background: rgba(200, 170, 50, 0.3);
+  color: var(--gold);
+  border: 1px solid rgba(200, 170, 50, 0.5);
+}
+
+.player-stat-badge.dishonor {
+  background: rgba(220, 50, 50, 0.3);
+  color: #ff6b6b;
+  border: 1px solid rgba(220, 50, 50, 0.5);
 }
 
 .player-stat-badge {

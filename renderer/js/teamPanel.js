@@ -212,19 +212,26 @@ function renderPlayerList() {
   }
 
   playerList.innerHTML = players.map(([playerId, player]) => {
-    const stats = getPlayerStats(player.gold || 0);
-    const rank = getPlayerRank(player.gold || 0);
+    const effectiveGold = getEffectiveGold(player);
+    const stats = getPlayerStats(effectiveGold);
+    const rank = getPlayerRank(effectiveGold);
     const nextLevelGold = getGoldForLevel(stats.level + 1);
     return `
     <div class="player-item" data-player-id="${playerId}">
       <input type="text" class="player-name" value="${player.name}">
       <div class="player-gold">
         <span class="player-gold-icon">&#9733;</span>
-        <input type="number" class="player-gold-input" value="${player.gold}" min="0">
+        <span class="player-gold-value">${effectiveGold}g</span>
       </div>
       <div class="player-level-row">
         <span class="player-level-badge" title="${rank.name}">Lv.${stats.level}</span>
         <span class="player-level-detail" title="Next level at ${nextLevelGold}g">HP:${stats.health} ATK:${stats.attack}</span>
+      </div>
+      <div class="player-honor-row">
+        <button class="honor-btn honor" title="Honor: +50g">&#9813;</button>
+        <span class="player-stat-badge honor" title="Honor points">${player.honor || 0}H</span>
+        <span class="player-stat-badge dishonor" title="Dishonor points">${player.dishonor || 0}D</span>
+        <button class="honor-btn dishonor" title="Dishonor: -50g">&#9760;</button>
       </div>
       <div class="player-stats-row">
         <span class="player-stat-badge kills" title="Kills">${player.kills || 0}K</span>
@@ -245,8 +252,12 @@ function renderPlayerList() {
       updatePlayerName(playerId, e.target.value);
     });
 
-    item.querySelector('.player-gold-input').addEventListener('input', (e) => {
-      updatePlayerGold(playerId, parseInt(e.target.value) || 0);
+    item.querySelector('.honor-btn.honor').addEventListener('click', () => {
+      applyHonor(playerId, true);
+    });
+
+    item.querySelector('.honor-btn.dishonor').addEventListener('click', () => {
+      applyHonor(playerId, false);
     });
 
     item.querySelector('.player-remove').addEventListener('click', () => {
@@ -279,9 +290,19 @@ function updatePlayerName(playerId, name) {
   }
 }
 
-function updatePlayerGold(playerId, gold) {
+function applyHonor(playerId, isHonor) {
   const currentTeam = getCurrentTeam();
-  GameState.setPlayerGold(currentTeam, playerId, gold);
+  const player = GameState.teams[currentTeam]?.players[playerId];
+  if (!player) return;
+
+  if (isHonor) {
+    player.honor = (player.honor || 0) + 1;
+    showNotification(`${player.name} received honor! +${HONOR_GOLD}g`);
+  } else {
+    player.dishonor = (player.dishonor || 0) + 1;
+    showNotification(`${player.name} received dishonor! -${HONOR_GOLD}g`);
+  }
+
   refreshAllPlayerStats();
   renderPlayerList();
   renderPlayerMarkers();

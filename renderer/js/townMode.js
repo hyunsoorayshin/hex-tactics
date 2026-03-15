@@ -215,7 +215,7 @@ function handleTownHousing(hexKey) {
   GameState.setPlayerPosition(teamId, playerId, null);
 
   // Heal player to full health
-  const stats = getPlayerStats(player.gold);
+  const stats = getPlayerStats(getEffectiveGold(player));
   player.health = stats.health;
   player.maxHealth = stats.health;
 

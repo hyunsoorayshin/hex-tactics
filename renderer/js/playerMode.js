@@ -6,14 +6,18 @@ let playerMode = false;
 let selectedPlayerId = null;
 
 // Rank definitions based on gold (icons in assets/icons/)
+// Rank tiers based on level
 const RANKS = [
-  { min: 0, max: 99, name: 'Peasant', icon: 'peasant.png' },
-  { min: 100, max: 999, name: 'Farmer', icon: 'farmer.png' },
-  { min: 1000, max: 1999, name: 'Merchant', icon: 'merchant.png' },
-  { min: 2000, max: 4999, name: 'Knight', icon: 'knight.png' },
-  { min: 5000, max: 7999, name: 'Grand Knight', icon: 'grandknight.png' },
-  { min: 8000, max: 9999, name: 'Baron', icon: 'baron.png' },
-  { min: 10000, max: Infinity, name: 'King', icon: 'king.png' }
+  { minLevel: 1, maxLevel: 2, name: 'Recruit', icon: 'recruit.png' },
+  { minLevel: 3, maxLevel: 4, name: 'Private', icon: 'private.png' },
+  { minLevel: 5, maxLevel: 7, name: 'Sergeant', icon: 'sergeant.png' },
+  { minLevel: 8, maxLevel: 10, name: 'Captain', icon: 'captain.png' },
+  { minLevel: 11, maxLevel: 14, name: 'Commander', icon: 'commander.png' },
+  { minLevel: 15, maxLevel: 19, name: 'General', icon: 'general.png' },
+  { minLevel: 20, maxLevel: 29, name: 'Marshal', icon: 'marshal.png' },
+  { minLevel: 30, maxLevel: 39, name: 'Warlord', icon: 'warlord.png' },
+  { minLevel: 40, maxLevel: 49, name: 'Conqueror', icon: 'conqueror.png' },
+  { minLevel: 50, maxLevel: Infinity, name: 'Overlord', icon: 'overlord.png' },
 ];
 
 // Level system: gold acts as XP with increasing cost per level
@@ -32,8 +36,9 @@ function getGoldForLevel(level) {
 }
 
 function getPlayerRank(gold) {
+  const level = getPlayerLevel(gold);
   for (const rank of RANKS) {
-    if (gold >= rank.min && gold <= rank.max) {
+    if (level >= rank.minLevel && level <= rank.maxLevel) {
       return rank;
     }
   }
@@ -247,13 +252,13 @@ function renderPlayerMarkers() {
   for (const [teamId, team] of Object.entries(GameState.teams)) {
     for (const [playerId, player] of Object.entries(team.players || {})) {
       if (player.position) {
-        addPlayerMarker(player.position, playerId, player.name, getEffectiveGold(player), team.border);
+        addPlayerMarker(player.position, teamId, playerId, player.name, getEffectiveGold(player), team.outline || team.border);
       }
     }
   }
 }
 
-function addPlayerMarker(hexKey, playerId, playerName, playerGold, teamColor) {
+function addPlayerMarker(hexKey, teamId, playerId, playerName, playerGold, teamColor) {
   const hexEl = document.querySelector(`[data-hex="${hexKey}"]`);
   if (!hexEl) return;
 
@@ -275,7 +280,7 @@ function addPlayerMarker(hexKey, playerId, playerName, playerGold, teamColor) {
   marker.setAttribute('data-player-id', playerId);
 
   // Create SVG filter for team color outline around PNG shape
-  const filterId = `player-outline-${playerId}`;
+  const filterId = `player-outline-${teamId}-${playerId}`;
   let defs = svg.querySelector('defs');
   if (!defs) {
     defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
@@ -333,6 +338,30 @@ function addPlayerMarker(hexKey, playerId, playerName, playerGold, teamColor) {
   icon.setAttribute('filter', `url(#${filterId})`);
   icon.classList.add('player-marker-icon');
 
+  // Level label above name
+  const stats = getPlayerStats(playerGold);
+  const lvlText = `Lv.${stats.level}`;
+  const lvlLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  lvlLabel.setAttribute('x', centerX);
+  lvlLabel.setAttribute('y', iconY - 16);
+  lvlLabel.setAttribute('text-anchor', 'middle');
+  lvlLabel.setAttribute('fill', '#d4af37');
+  lvlLabel.setAttribute('font-size', '8');
+  lvlLabel.setAttribute('font-weight', 'bold');
+  lvlLabel.classList.add('player-marker-level');
+  lvlLabel.textContent = lvlText;
+
+  const lvlBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  const lvlWidth = lvlText.length * 5 + 4;
+  lvlBg.setAttribute('x', centerX - lvlWidth / 2);
+  lvlBg.setAttribute('y', iconY - 24);
+  lvlBg.setAttribute('width', lvlWidth);
+  lvlBg.setAttribute('height', 10);
+  lvlBg.setAttribute('rx', 3);
+  lvlBg.setAttribute('fill', 'rgba(0, 0, 0, 0.8)');
+  lvlBg.setAttribute('stroke', 'rgba(212, 175, 55, 0.5)');
+  lvlBg.setAttribute('stroke-width', 0.5);
+
   // Player name above icon
   const name = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   name.setAttribute('x', centerX);
@@ -356,6 +385,8 @@ function addPlayerMarker(hexKey, playerId, playerName, playerGold, teamColor) {
   nameBg.setAttribute('stroke', teamColor);
   nameBg.setAttribute('stroke-width', 1);
 
+  marker.appendChild(lvlBg);
+  marker.appendChild(lvlLabel);
   marker.appendChild(nameBg);
   marker.appendChild(name);
   marker.appendChild(icon);
@@ -367,9 +398,6 @@ function clearPlayerMarker(playerId) {
   if (marker) {
     marker.remove();
   }
-  // Clean up the filter
-  const filter = document.getElementById(`player-outline-${playerId}`);
-  if (filter) {
-    filter.remove();
-  }
+  // Clean up any filters for this player (across all teams)
+  document.querySelectorAll(`[id$="-${playerId}"][id^="player-outline-"]`).forEach(f => f.remove());
 }

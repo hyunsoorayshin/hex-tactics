@@ -122,7 +122,7 @@ function addWallMarker(edgeKey, teamId) {
   const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
 
   const team = GameState.teams[teamId];
-  const teamColor = team?.border || '#ffffff';
+  const teamColor = team?.outline || team?.border || '#ffffff';
 
   const svg = document.getElementById('hex-overlay');
 

@@ -114,7 +114,7 @@ function addArmyMarker(hexKey, teamId) {
   if (!hexEl) return;
 
   const team = GameState.teams[teamId];
-  const teamColor = team?.border || '#ffffff';
+  const teamColor = team?.outline || team?.border || '#ffffff';
 
   // Get hex center position
   const bbox = hexEl.getBBox();

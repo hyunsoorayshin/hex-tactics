@@ -51,6 +51,26 @@ function getPlayerStats(gold) {
   };
 }
 
+// Refresh all players' stats to match current level
+// Scales current health proportionally (e.g. 50% HP stays 50% with new max)
+function refreshAllPlayerStats() {
+  for (const [teamId, team] of Object.entries(GameState.teams)) {
+    for (const [playerId, player] of Object.entries(team.players || {})) {
+      if (player.isDead) continue;
+
+      const stats = getPlayerStats(player.gold || 0);
+      const oldMax = player.maxHealth || stats.health;
+      const newMax = stats.health;
+
+      if (oldMax !== newMax) {
+        const healthPercent = (player.health !== undefined) ? player.health / oldMax : 1;
+        player.maxHealth = newMax;
+        player.health = Math.max(1, Math.round(newMax * healthPercent));
+      }
+    }
+  }
+}
+
 function isPlayerMode() {
   return playerMode;
 }

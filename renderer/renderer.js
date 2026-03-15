@@ -272,6 +272,16 @@ window.addEventListener('keydown', (e) => {
     console.log('Move mode:', isMoveMode() ? 'ON' : 'OFF');
   }
 
+  // R - refresh player stats
+  if (e.key === 'r' || e.key === 'R') {
+    refreshAllPlayerStats();
+    renderPlayerMarkers();
+    renderAllHealthBars();
+    if (isTeamPanelOpen()) updateTeamPanel();
+    if (isPlayerMode()) updatePlayerPanel();
+    showNotification('Player stats refreshed');
+  }
+
   // Shift + 1-0 - select team
   if (e.shiftKey && e.code.startsWith('Digit')) {
     const digit = parseInt(e.code.replace('Digit', ''));

@@ -282,6 +282,10 @@ function updatePlayerName(playerId, name) {
 function updatePlayerGold(playerId, gold) {
   const currentTeam = getCurrentTeam();
   GameState.setPlayerGold(currentTeam, playerId, gold);
+  refreshAllPlayerStats();
+  renderPlayerList();
+  renderPlayerMarkers();
+  renderAllHealthBars();
   updateTeamStats();
 }
 

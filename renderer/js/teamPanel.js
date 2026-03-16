@@ -11,6 +11,7 @@ function getTeamAssetCounts(teamId) {
     wall: 0,
     town: 0,
     army: 0,
+    catapult: 0,
     ship: 0,
     fleet: 0,
     wagon: 0,
@@ -23,6 +24,7 @@ function getTeamAssetCounts(teamId) {
       if (obj.type === 'castle') counts.castle++;
       else if (obj.type === 'town') counts.town++;
       else if (obj.type === 'army') counts.army++;
+      else if (obj.type === 'catapult') counts.catapult++;
       else if (obj.type === 'ship') counts.ship++;
       else if (obj.type === 'fleet') counts.fleet++;
       else if (obj.type === 'wagon') counts.wagon++;
@@ -109,6 +111,11 @@ function createTeamPanelHTML() {
             <span class="asset-icon">&#9876;</span>
             <span class="asset-value" id="asset-army">0</span>
             <span class="asset-label">Army</span>
+          </div>
+          <div class="asset-item">
+            <span class="asset-icon">&#127919;</span>
+            <span class="asset-value" id="asset-catapult">0</span>
+            <span class="asset-label">Catapult</span>
           </div>
           <div class="asset-item">
             <span class="asset-icon">&#9973;</span>
@@ -214,6 +221,7 @@ function updateTeamPanel() {
   document.getElementById('asset-wall').textContent = formatAsset(assetCounts.wall, lost.wall || 0);
   document.getElementById('asset-town').textContent = formatAsset(assetCounts.town, lost.town || 0);
   document.getElementById('asset-army').textContent = formatAsset(assetCounts.army, lost.army || 0);
+  document.getElementById('asset-catapult').textContent = formatAsset(assetCounts.catapult, lost.catapult || 0);
   document.getElementById('asset-ship').textContent = formatAsset(assetCounts.ship, lost.ship || 0);
   document.getElementById('asset-fleet').textContent = formatAsset(assetCounts.fleet, lost.fleet || 0);
   document.getElementById('asset-wagon').textContent = formatAsset(assetCounts.wagon, lost.wagon || 0);

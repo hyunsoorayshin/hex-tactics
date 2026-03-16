@@ -71,7 +71,7 @@ function updateBattleHint() {
     hint.textContent = `Select target for ${name} to attack`;
     hint.classList.add('interaction');
   } else {
-    hint.textContent = 'Select a player, army, ship, or fleet to attack';
+    hint.textContent = 'Select a player, army, catapult, ship, or fleet to attack';
     hint.classList.remove('interaction');
   }
 }
@@ -132,6 +132,18 @@ function getAttackerAtHex(hexKey) {
       name: 'Army',
       attack: 10,
       range: ATTACK_RANGE.army
+    };
+  }
+
+  if (obj?.type === 'catapult') {
+    return {
+      type: 'catapult',
+      hexKey,
+      teamId: obj.teamId,
+      data: obj,
+      name: 'Catapult',
+      attack: 50,
+      range: ATTACK_RANGE.catapult
     };
   }
 
@@ -236,7 +248,7 @@ function getAttackerStats(attacker) {
       health: currentHealth,
       maxHealth: stats.health
     };
-  } else if (attacker.type === 'army' || attacker.type === 'ship' || attacker.type === 'fleet') {
+  } else if (attacker.type === 'army' || attacker.type === 'catapult' || attacker.type === 'ship' || attacker.type === 'fleet') {
     const maxHealth = OBJECT_HEALTH[attacker.type] || 100;
     const currentHealth = attacker.data.health !== undefined ? attacker.data.health : maxHealth;
     return {
@@ -309,7 +321,7 @@ function executeAttack(targetKey, isEdge = false) {
   if (selectedAttacker.type === 'player') {
     attackerTeamId = selectedAttacker.teamId;
     attackerPlayerId = selectedAttacker.playerId;
-  } else if (selectedAttacker.type === 'army' || selectedAttacker.type === 'ship' || selectedAttacker.type === 'fleet') {
+  } else if (selectedAttacker.type === 'army' || selectedAttacker.type === 'catapult' || selectedAttacker.type === 'ship' || selectedAttacker.type === 'fleet') {
     attackerTeamId = selectedAttacker.teamId;
     attackerPlayerId = null;
   }
@@ -328,6 +340,7 @@ function executeAttack(targetKey, isEdge = false) {
   renderWagons();
   renderMinerals();
   renderArmies();
+  renderCatapults();
   renderTowns();
   renderCastles();
   renderBridges();

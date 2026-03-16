@@ -38,6 +38,9 @@ function renderGameState() {
   // Render armies on map
   renderArmies();
 
+  // Render catapults on map
+  renderCatapults();
+
   // Render towns on map
   renderTowns();
 

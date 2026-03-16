@@ -8,6 +8,7 @@ const OBJECT_HEALTH = {
   ship: 500,
   bridge: 100,
   wall: 100,
+  catapult: 10,
   mineral: 100,
   wagon: 100,
   fleet: 1000,
@@ -26,6 +27,7 @@ const OBJECT_COSTS = {
   bridge: 50,
   ship: 100,
   army: 200,
+  catapult: 200,
   wagon: 150,
   fleet: 400,
   town: 1000,
@@ -35,6 +37,7 @@ const OBJECT_COSTS = {
 // Movement speeds (hexes per move, 0 = immovable)
 const MOVE_SPEED = {
   army: 2,
+  catapult: 3,
   ship: 15,
   wagon: 7,
   fleet: 10,
@@ -47,6 +50,7 @@ const MOVE_SPEED = {
 // Attack range (hexes)
 const ATTACK_RANGE = {
   army: 1,
+  catapult: 3,
   ship: 2,
   fleet: 2,
   wagon: 0,
@@ -71,6 +75,7 @@ const ICON_SIZE = {
   player: ICON_SIZE_SMALL,
   army: ICON_SIZE_SMALL,
   ship: ICON_SIZE_SMALL,
+  catapult: ICON_SIZE_SMALL,
   mineral: ICON_SIZE_MEDIUM,
   wagon: ICON_SIZE_MEDIUM,
   fleet: ICON_SIZE_MEDIUM,

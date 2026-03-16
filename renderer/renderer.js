@@ -65,6 +65,11 @@ window.addEventListener('keydown', (e) => {
       updateStatus();
       return;
     }
+    if (isCatapultMode()) {
+      toggleCatapultMode();
+      updateStatus();
+      return;
+    }
     if (isTownMode()) {
       toggleTownMode();
       updateStatus();
@@ -151,6 +156,7 @@ window.addEventListener('keydown', (e) => {
     if (isCastleMode()) toggleCastleMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
@@ -170,6 +176,7 @@ window.addEventListener('keydown', (e) => {
     if (isCastleMode()) toggleCastleMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
@@ -189,6 +196,7 @@ window.addEventListener('keydown', (e) => {
     if (isPlayerMode()) togglePlayerMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
@@ -208,6 +216,7 @@ window.addEventListener('keydown', (e) => {
     if (isPlayerMode()) togglePlayerMode();
     if (isCastleMode()) toggleCastleMode();
     if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
@@ -240,6 +249,27 @@ window.addEventListener('keydown', (e) => {
     console.log('Army mode:', isArmyMode() ? 'ON' : 'OFF');
   }
 
+  // D - toggle catapult mode
+  if (e.key === 'd' || e.key === 'D') {
+    if (isLandMode()) toggleLandMode();
+    if (isPlayerMode()) togglePlayerMode();
+    if (isCastleMode()) toggleCastleMode();
+    if (isBridgeMode()) toggleBridgeMode();
+    if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
+    if (isTownMode()) toggleTownMode();
+    if (isWallMode()) toggleWallMode();
+    if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
+    if (isBattleMode()) toggleBattleMode();
+    if (isMoveMode()) toggleMoveMode();
+    toggleCatapultMode();
+    updateStatus();
+    console.log('Catapult mode:', isCatapultMode() ? 'ON' : 'OFF');
+  }
+
   // T - toggle town mode
   if (e.key === 't' || e.key === 'T') {
     if (isLandMode()) toggleLandMode();
@@ -266,6 +296,7 @@ window.addEventListener('keydown', (e) => {
     if (isCastleMode()) toggleCastleMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
     if (isTownMode()) toggleTownMode();
     if (isShipMode()) toggleShipMode();
     if (isFleetMode()) toggleFleetMode();
@@ -285,6 +316,7 @@ window.addEventListener('keydown', (e) => {
     if (isCastleMode()) toggleCastleMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isFleetMode()) toggleFleetMode();
@@ -304,6 +336,7 @@ window.addEventListener('keydown', (e) => {
     if (isCastleMode()) toggleCastleMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
@@ -324,6 +357,7 @@ window.addEventListener('keydown', (e) => {
     if (isCastleMode()) toggleCastleMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
@@ -344,6 +378,7 @@ window.addEventListener('keydown', (e) => {
     if (isCastleMode()) toggleCastleMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
@@ -364,6 +399,7 @@ window.addEventListener('keydown', (e) => {
     if (isCastleMode()) toggleCastleMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
@@ -383,6 +419,7 @@ window.addEventListener('keydown', (e) => {
     if (isCastleMode()) toggleCastleMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();

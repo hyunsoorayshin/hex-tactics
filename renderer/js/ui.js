@@ -18,6 +18,7 @@ function updateStatus() {
   const castleModeActive = isCastleMode();
   const bridgeModeActive = isBridgeMode();
   const armyModeActive = isArmyMode();
+  const catapultModeActive = isCatapultMode();
   const townModeActive = isTownMode();
   const wallModeActive = isWallMode();
   const shipModeActive = isShipMode();
@@ -33,6 +34,7 @@ function updateStatus() {
   if (castleModeActive) modeText = 'CASTLE';
   if (bridgeModeActive) modeText = 'BRIDGE';
   if (armyModeActive) modeText = 'ARMY';
+  if (catapultModeActive) modeText = 'CATAPULT';
   if (townModeActive) modeText = 'TOWN';
   if (wallModeActive) modeText = 'WALL';
   if (shipModeActive) modeText = 'SHIP';
@@ -43,7 +45,7 @@ function updateStatus() {
   if (moveModeActive) modeText = 'MOVE';
 
   const anyModeActive = landModeActive || playerModeActive || castleModeActive || bridgeModeActive ||
-                        armyModeActive || townModeActive || wallModeActive || shipModeActive ||
+                        armyModeActive || catapultModeActive || townModeActive || wallModeActive || shipModeActive ||
                         fleetModeActive || wagonModeActive || mineralModeActive ||
                         battleModeActive || moveModeActive;
 
@@ -53,7 +55,7 @@ function updateStatus() {
     <span class="divider">|</span>
     <span class="mode ${anyModeActive ? 'active' : ''}">${modeText}</span>
     <span class="divider">|</span>
-    <span class="hint">L: Land | C: Castle | B: Bridge | A: Army | T: Town | W: Wall | S: Ship | F: Fleet | G: Wagon | N: Mineral | X: Battle | M: Move</span>
+    <span class="hint">L: Land | C: Castle | B: Bridge | A: Army | D: Catapult | T: Town | W: Wall | S: Ship | F: Fleet | G: Wagon | N: Mineral | X: Battle | M: Move</span>
   `;
 }
 

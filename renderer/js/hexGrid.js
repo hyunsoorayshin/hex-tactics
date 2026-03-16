@@ -222,6 +222,8 @@ function onHexClick(hex, element, shiftKey, metaKey, altKey) {
   } else if (isArmyMode()) {
     // Delegate to army mode module
     onArmyModeHexClick(hexKey, element, metaKey);
+  } else if (isCatapultMode()) {
+    onCatapultModeHexClick(hexKey, element, metaKey);
   } else if (isTownMode()) {
     // Delegate to town mode module
     onTownModeHexClick(hexKey, element, metaKey);

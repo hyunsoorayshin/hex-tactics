@@ -280,6 +280,7 @@ function rerenderObjectType(type) {
     case 'fleet': renderFleets(); break;
     case 'wagon': renderWagons(); break;
     case 'army': renderArmies(); break;
+    case 'catapult': renderCatapults(); break;
     case 'bridge': renderBridges(); break;
     case 'castle': renderCastles(); break;
     case 'town': renderTowns(); break;

@@ -45,6 +45,13 @@ function getPlayerRank(gold) {
   return RANKS[0];
 }
 
+// Get player move speed: base 1 + 1 per every 2 rank tiers (max 5)
+function getPlayerMoveSpeed(gold) {
+  const rank = getPlayerRank(gold);
+  const rankIndex = RANKS.indexOf(rank);
+  return PLAYER_BASE_SPEED + Math.floor(rankIndex / 2);
+}
+
 // Get player combat stats based on gold (level-scaled)
 // Health = 10 + (level × 5), Attack = 5 + (level × 3)
 function getPlayerStats(gold) {

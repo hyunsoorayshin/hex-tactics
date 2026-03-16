@@ -47,6 +47,15 @@ function renderGameState() {
   // Render ships on map
   renderShips();
 
+  // Render fleets on map
+  renderFleets();
+
+  // Render wagons on map
+  renderWagons();
+
+  // Render minerals on map
+  renderMinerals();
+
   // Render health bars for damaged objects
   renderAllHealthBars();
 }

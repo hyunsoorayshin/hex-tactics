@@ -406,6 +406,11 @@ function addCastleMarker(hexKey, teamId, housed, isSelected) {
     const metaKey = e.metaKey || e.ctrlKey;
     const shiftKey = e.shiftKey;
 
+    if (isLandMode()) {
+      onLandClick(hexKey, null);
+      return;
+    }
+
     // Handle housing mode clicks
     if (castleHousingMode === 'housing') {
       handleCastleHousing(hexKey);

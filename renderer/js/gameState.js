@@ -4,23 +4,62 @@
 
 // Object health values (tuned for faster gameplay)
 const OBJECT_HEALTH = {
-  bridge: 40,
-  wall: 50,
-  ship: 60,
-  town: 120,
-  army: 100,
-  castle: 350  // Requires 4-5 King attacks (80 dmg each)
+  army: 20,
+  ship: 500,
+  bridge: 100,
+  wall: 100,
+  mineral: 100,
+  wagon: 100,
+  fleet: 1000,
+  town: 200,
+  castle: 500
 };
 
 // Object costs (gold)
+const LAND_COST = 10;
+
+// Mineral reward when destroyed
+const MINERAL_REWARD = 500;
+
 const OBJECT_COSTS = {
-  wall: 25,
+  wall: 100,
   bridge: 50,
-  ship: 75,
-  army: 100,
+  ship: 100,
+  army: 200,
+  wagon: 150,
+  fleet: 400,
   town: 1000,
   castle: 5000
 };
+
+// Movement speeds (hexes per move, 0 = immovable)
+const MOVE_SPEED = {
+  army: 2,
+  ship: 15,
+  wagon: 7,
+  fleet: 10,
+  bridge: 0,
+  wall: 0,
+  town: 0,
+  castle: 0
+};
+
+// Attack range (hexes)
+const ATTACK_RANGE = {
+  army: 1,
+  ship: 2,
+  fleet: 2,
+  wagon: 0,
+  bridge: 0,
+  wall: 0,
+  town: 0,
+  castle: 0
+};
+
+const PLAYER_ATTACK_RANGE = 1;
+
+// Base player move speed (5) + 1 per rank tier
+const PLAYER_BASE_SPEED = 1;
 
 // Icon sizes: small=34, medium=48, large=64, xlarge=100
 const ICON_SIZE_SMALL = 38;
@@ -32,6 +71,9 @@ const ICON_SIZE = {
   player: ICON_SIZE_SMALL,
   army: ICON_SIZE_SMALL,
   ship: ICON_SIZE_SMALL,
+  mineral: ICON_SIZE_MEDIUM,
+  wagon: ICON_SIZE_MEDIUM,
+  fleet: ICON_SIZE_MEDIUM,
   bridge: ICON_SIZE_MEDIUM,
   town: ICON_SIZE_LARGE,
   castle: ICON_SIZE_XLARGE
@@ -194,13 +236,27 @@ const GameState = {
     return (team.reviveCount || 0) * REVIVE_COST;
   },
 
-  // Get team's available gold (merit points - all costs)
+  // Get team's land cost
+  getTeamLandCost(teamId) {
+    return this.getTeamLandCount(teamId) * LAND_COST;
+  },
+
+  // Get team's mineral bonus gold
+  getTeamMineralGold(teamId) {
+    const team = this.teams[teamId];
+    if (!team) return 0;
+    return (team.mineralsDestroyed || 0) * MINERAL_REWARD;
+  },
+
+  // Get team's available gold (merit points + mineral gold - all costs)
   getTeamAvailableGold(teamId) {
     const meritPoints = this.getTeamGold(teamId);
+    const mineralGold = this.getTeamMineralGold(teamId);
+    const landCost = this.getTeamLandCost(teamId);
     const objectsCost = this.getTeamObjectsCost(teamId);
     const lostCost = this.getTeamLostObjectsCost(teamId);
     const reviveCost = this.getTeamReviveCost(teamId);
-    return meritPoints - objectsCost - lostCost - reviveCost;
+    return meritPoints + mineralGold - landCost - objectsCost - lostCost - reviveCost;
   },
 
   // Get team's asset counts

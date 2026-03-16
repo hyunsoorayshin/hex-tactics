@@ -143,6 +143,11 @@ function addBridgeMarker(hexKey, teamId, rotation) {
     e.stopPropagation();
     const metaKey = e.metaKey || e.ctrlKey;
 
+    if (isLandMode()) {
+      onLandClick(hexKey, null);
+      return;
+    }
+
     // Delegate to other modes if active
     if (isBattleMode()) {
       onBattleModeHexClick(hexKey, null, e.shiftKey);

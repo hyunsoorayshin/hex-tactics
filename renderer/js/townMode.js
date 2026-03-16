@@ -310,6 +310,11 @@ function addTownMarker(hexKey, teamId, housed, isSelected) {
     const metaKey = e.metaKey || e.ctrlKey;
     const shiftKey = e.shiftKey;
 
+    if (isLandMode()) {
+      onLandClick(hexKey, null);
+      return;
+    }
+
     // Handle housing mode clicks
     if (townHousingMode === 'housing') {
       handleTownHousing(hexKey);

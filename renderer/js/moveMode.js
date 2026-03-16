@@ -30,6 +30,7 @@ function clearMoveSelection() {
   selectedMoveObject = null;
   movePhase = moveMode ? 'select_object' : null;
   updateMoveHint();
+  clearMoveRange();
   // Remove selection highlight
   document.querySelectorAll('.move-selected').forEach(el => el.classList.remove('move-selected'));
 }
@@ -67,7 +68,8 @@ function updateMoveHint() {
 
   if (movePhase === 'select_destination') {
     const name = selectedMoveObject?.type || 'object';
-    hint.textContent = `Click destination hex to move ${name}`;
+    const speed = selectedMoveObject?.speed || 0;
+    hint.textContent = `Click destination to move ${name} (range: ${speed} hexes)`;
     hint.classList.add('interaction');
   } else {
     hint.textContent = 'Click an object or player to move';
@@ -95,32 +97,40 @@ function onMoveModeHexClick(hexKey, element, shiftKey) {
 }
 
 function getMovableAtHex(hexKey) {
-  // Check for hex objects (ship, army, castle, town, bridge)
+  // Check for hex objects (ship, army, fleet, etc.)
   const hexObj = GameState.hexObjects[hexKey];
   if (hexObj) {
     // Don't allow moving territory markers
     if (hexObj.type === 'castle-territory' || hexObj.type === 'town-territory') {
-      return null;
+      // Fall through to check for players on this hex
+    } else {
+      const speed = MOVE_SPEED[hexObj.type];
+      if (speed !== 0 && speed !== undefined) {
+        return {
+          type: hexObj.type,
+          hexKey,
+          isHexObject: true,
+          data: hexObj,
+          speed: speed
+        };
+      }
+      // Immovable object — fall through to check for players/armies on same hex
     }
-    return {
-      type: hexObj.type,
-      hexKey,
-      isHexObject: true,
-      data: hexObj
-    };
   }
 
   // Check for players at this hex
   const players = GameState.getPlayersAtHex(hexKey);
   if (players.length > 0) {
     const { teamId, playerId, player } = players[0];
+    const speed = getPlayerMoveSpeed(getEffectiveGold(player));
     return {
       type: 'player',
       hexKey,
       teamId,
       playerId,
       player,
-      isPlayer: true
+      isPlayer: true,
+      speed: speed
     };
   }
 
@@ -132,7 +142,8 @@ function selectObjectToMove(hexKey, movable) {
   movePhase = 'select_destination';
   updateMoveHint();
   highlightSelectedObject(hexKey);
-  showNotification(`Selected ${movable.type} to move`);
+  showMoveRange(hexKey, movable.speed);
+  showNotification(`Selected ${movable.type} to move (range: ${movable.speed} hexes)`);
 }
 
 function executeMove(destinationHexKey) {
@@ -141,6 +152,14 @@ function executeMove(destinationHexKey) {
   // Check if destination is the same as source
   if (destinationHexKey === selectedMoveObject.hexKey) {
     showNotification('Already at this location', 'error');
+    clearMoveSelection();
+    return;
+  }
+
+  // Check movement range
+  const distance = hexDistance(selectedMoveObject.hexKey, destinationHexKey);
+  if (distance > selectedMoveObject.speed) {
+    showNotification(`Out of range! (${distance} hexes, max ${selectedMoveObject.speed})`, 'error');
     clearMoveSelection();
     return;
   }
@@ -174,19 +193,11 @@ function executeMove(destinationHexKey) {
     // Move hex object (preserving all properties including health)
     const obj = GameState.hexObjects[selectedMoveObject.hexKey];
 
-    // Handle castle move - need to move territory too
-    if (obj.type === 'castle') {
-      moveCastle(selectedMoveObject.hexKey, destinationHexKey);
-    } else if (obj.type === 'town') {
-      moveTown(selectedMoveObject.hexKey, destinationHexKey);
-    } else {
-      // Simple move for other objects
-      delete GameState.hexObjects[selectedMoveObject.hexKey];
-      GameState.hexObjects[destinationHexKey] = obj;
-      showNotification(`${selectedMoveObject.type} moved`);
-      // Re-render the appropriate type
-      rerenderObjectType(obj.type);
-    }
+    // Simple move for movable objects
+    delete GameState.hexObjects[selectedMoveObject.hexKey];
+    GameState.hexObjects[destinationHexKey] = obj;
+    showNotification(`${selectedMoveObject.type} moved`);
+    rerenderObjectType(obj.type);
   }
 
   // Update health bars to new positions
@@ -266,6 +277,8 @@ function moveTown(fromHex, toHex) {
 function rerenderObjectType(type) {
   switch (type) {
     case 'ship': renderShips(); break;
+    case 'fleet': renderFleets(); break;
+    case 'wagon': renderWagons(); break;
     case 'army': renderArmies(); break;
     case 'bridge': renderBridges(); break;
     case 'castle': renderCastles(); break;
@@ -287,4 +300,21 @@ function highlightSelectedObject(hexKey) {
       m.classList.add('move-selected');
     }
   });
+}
+
+function showMoveRange(fromHexKey, speed) {
+  clearMoveRange();
+  // Highlight all hex polygons within range
+  document.querySelectorAll('.hex[data-hex]').forEach(hexEl => {
+    const hexKey = hexEl.getAttribute('data-hex');
+    if (hexKey === fromHexKey) return;
+    const dist = hexDistance(fromHexKey, hexKey);
+    if (dist <= speed) {
+      hexEl.classList.add('move-in-range');
+    }
+  });
+}
+
+function clearMoveRange() {
+  document.querySelectorAll('.move-in-range').forEach(el => el.classList.remove('move-in-range'));
 }

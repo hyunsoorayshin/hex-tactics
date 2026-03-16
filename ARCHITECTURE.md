@@ -37,8 +37,11 @@ rayhaven2/
         ├── townMode.js     # Town placement on owned land
         ├── wallMode.js     # Wall placement on hex edges
         ├── shipMode.js     # Ship placement (any hex)
-        ├── battleMode.js   # Combat system with health
-        ├── moveMode.js     # Object movement system
+        ├── fleetMode.js    # Fleet placement (10 passengers)
+        ├── wagonMode.js    # Wagon placement (5 passengers)
+        ├── mineralMode.js  # Mineral placement (battle objectives)
+        ├── battleMode.js   # Combat system with health, attack range
+        ├── moveMode.js     # Object movement with speed limits
         ├── hexGrid.js      # Hex grid system
         ├── panZoom.js      # Navigation controls
         ├── teamPanel.js    # Team UI panel (creates own HTML)
@@ -304,6 +307,9 @@ Application entry point:
   - `T` - Toggle town mode
   - `W` - Toggle wall mode
   - `S` - Toggle ship mode
+  - `F` - Toggle fleet mode
+  - `G` - Toggle wagon mode
+  - `N` - Toggle mineral mode
   - `X` - Toggle battle mode
   - `M` - Toggle move mode
   - `R` - Refresh all player stats
@@ -355,14 +361,17 @@ Scripts must load in this order (defined in `index.html`):
 7. `townMode.js` - Depends on: gameState, hexGrid (getHexAndNeighbors)
 8. `wallMode.js` - Depends on: gameState, hexGrid (Hex, getHexCorners)
 9. `shipMode.js` - Depends on: gameState
-10. `battleMode.js` - Depends on: gameState, playerMode (getPlayerStats)
-11. `moveMode.js` - Depends on: gameState
-12. `hexGrid.js` - Depends on: gameState, all mode modules
-13. `panZoom.js` - Depends on: hexGrid (MAP_WIDTH/HEIGHT)
-14. `teamPanel.js` - Depends on: gameState, playerMode
-15. `saveLoad.js` - Depends on: gameState, all mode modules, ui, battleMode (renderAllHealthBars)
-16. `ui.js` - Depends on: gameState, all mode modules
-17. `renderer.js` - Depends on: all modules
+10. `fleetMode.js` - Depends on: gameState
+11. `wagonMode.js` - Depends on: gameState
+12. `mineralMode.js` - Depends on: gameState
+13. `battleMode.js` - Depends on: gameState, playerMode (getPlayerStats)
+14. `moveMode.js` - Depends on: gameState, hexGrid (hexDistance)
+15. `hexGrid.js` - Depends on: gameState, all mode modules
+16. `panZoom.js` - Depends on: hexGrid (MAP_WIDTH/HEIGHT)
+17. `teamPanel.js` - Depends on: gameState, playerMode
+18. `saveLoad.js` - Depends on: gameState, all mode modules, ui, battleMode (renderAllHealthBars)
+19. `ui.js` - Depends on: gameState, all mode modules
+20. `renderer.js` - Depends on: all modules
 
 ## Data Flow
 
@@ -414,10 +423,14 @@ Teacher updates CSV grades
 | T | Toggle town mode |
 | W | Toggle wall mode |
 | S | Toggle ship mode |
+| F | Toggle fleet mode |
+| G | Toggle wagon mode |
+| N | Toggle mineral mode |
 | X | Toggle battle mode |
 | M | Toggle move mode |
 | R | Refresh all player stats |
-| Shift + Click (ship) | Board/disembark player |
+| Shift + Click (ship/fleet/wagon) | Board passenger |
+| Option + Click (ship/fleet/wagon) | Disembark passenger |
 | Shift + Click (town/castle) | House/evict player |
 | Cmd + Click | Remove object (in placement modes) |
 | Shift + 1-9, 0 | Select team 1-10 |
@@ -429,12 +442,13 @@ Teacher updates CSV grades
 GameState = {
   hexObjects: {
     "q,r": {
-      type: "castle" | "town" | "army" | "ship" | "bridge" | "castle-territory" | "town-territory",
+      type: "castle" | "town" | "army" | "ship" | "fleet" | "wagon" | "mineral" | "bridge" | "castle-territory" | "town-territory",
       teamId: number,
       health: number,      // Current health (objects only)
       maxHealth: number,   // Maximum health (objects only)
       centerHex: "q,r",    // For territory hexes, reference to center
       passenger: { teamId, playerId, name },  // For ships with passengers
+      passengers: [{ kind, teamId, playerId, name }], // For fleets/wagons
       housed: { teamId, playerId, name },     // For towns/castles with housed players
       rotation: number     // For bridges (0, 60, 120 degrees)
     }
@@ -464,9 +478,12 @@ GameState = {
         town: number,
         army: number,
         ship: number,
+        fleet: number,
+        wagon: number,
         bridge: number,
         wall: number
       },
+      mineralsDestroyed: number, // Minerals destroyed (500g bonus each)
       reviveCount: number, // Total player revives (for cost calculation)
       players: {
         playerId: {
@@ -546,46 +563,60 @@ Ranks determine the player's icon and are based on level:
 
 Team gold is calculated as:
 ```
-Available Gold = Merit Points - Present Objects Cost - Lost Objects Cost - Revive Costs
+Available Gold = Merit Points + Mineral Gold - Land Cost - Present Objects Cost - Lost Objects Cost - Revive Costs
 ```
 
 Where:
 - **Merit Points** = Sum of all player effective gold
 - **Effective Gold** = Base gold (from CSV) + honor×50 - dishonor×50
+- **Mineral Gold** = mineralsDestroyed × 500g
+- **Land Cost** = land count × 10g
 - **Present Objects Cost** = Sum of costs for all currently placed objects
 - **Lost Objects Cost** = Sum of costs for all destroyed objects
 - **Revive Costs** = reviveCount × 10g
 
-### Object Health & Cost
+### Object Stats
 
-| Object | Health | Cost | Icon Size |
-|--------|--------|------|-----------|
-| Bridge | 40 | 50g | Medium (48px) |
-| Wall | 50 | 25g | — (edge) |
-| Ship | 60 | 75g | Small (28px) |
-| Army | 100 | 100g | Small (28px) |
-| Town | 120 | 1,000g | Large (64px) |
-| Castle | 350 | 5,000g | XLarge (100px) |
+| Object | HP | ATK | Cost | Move | Range | Icon Size |
+|--------|-----|-----|------|------|-------|-----------|
+| Army | 20 | 10 | 200g | 2 | 1 | Small (38px) |
+| Ship | 500 | 200 | 100g | 15 | 2 | Small (38px) |
+| Wagon | 100 | 0 | 150g | 7 | 0 | Medium (48px) |
+| Fleet | 1000 | 300 | 400g | 10 | 2 | Medium (48px) |
+| Mineral | 100 | 0 | — | 0 | 0 | Medium (48px) |
+| Bridge | 100 | 0 | 50g | 0 | 0 | Medium (48px) |
+| Wall | 100 | 0 | 100g | 0 | 0 | — (edge) |
+| Town | 200 | 0 | 1,000g | 0 | 0 | Large (64px) |
+| Castle | 500 | 0 | 5,000g | 0 | 0 | XLarge (100px) |
+| Land | — | — | 10g/hex | — | — | — |
+
+### Player Movement Speed
+
+Base speed 1 + 1 per every 2 rank tiers (max 5 at Conqueror/Overlord).
 
 ### Icon Size Tiers
 
 | Tier | Size | Types |
 |------|------|-------|
-| Small | 28px | Player, Army, Ship |
-| Medium | 48px | Bridge |
+| Small | 38px | Player, Army, Ship |
+| Medium | 48px | Bridge, Fleet, Wagon, Mineral |
 | Large | 64px | Town |
 | XLarge | 100px | Castle |
 
 ### Combat Rules
 
-- **Player vs Player**: Mutual damage - both players take each other's attack value
-- **Player vs Object**: Only object takes damage (objects don't fight back)
-- **Ship with Passenger**: Can attack using passenger's attack stats
+- **One-way damage**: Only the target takes damage (no mutual combat)
+- **Attack Range**: Player/Army = 1 hex, Ship/Fleet = 2 hexes
+- **Ship/Fleet**: Attack directly with their own ATK value
 - **Friendly Fire**: Allowed (can attack own team)
 - **Castle Destruction**: Only center hex removed, territory hexes remain
 - **Ship Destruction**: Passenger dies with the ship
+- **Fleet/Wagon Destruction**: All passengers die/are lost
+- **Mineral Destruction**: Attacking team gains 500g (team bonus, not individual)
 - **Player Death**: Player marked as dead (not removed), can revive at own town/castle
 - **Object Removal**: Cmd+click to remove objects (prevents accidental deletion)
+- **Move Range**: Visual hex highlight shows reachable hexes; out-of-range moves blocked
+- **Attack Range**: Visual red hex highlight shows attackable hexes; out-of-range attacks blocked
 
 ### Revive Cost
 
@@ -595,16 +626,16 @@ Where:
 
 | Team | Color | Outline |
 |------|-------|---------|
-| 1 | Red | #ff0000 |
-| 2 | Blue | #0066ff |
-| 3 | Green | #00cc00 |
-| 4 | Yellow | #ffdd00 |
-| 5 | Purple | #cc00cc |
-| 6 | Teal | #00cccc |
-| 7 | Orange | #ff8800 |
-| 8 | Brown | #aa6633 |
-| 9 | Hot Pink | #ff4488 |
-| 10 | Olive | #88aa00 |
+| 1 | Red | #ff3333 |
+| 2 | Blue | #3399ff |
+| 3 | Green | #33ff33 |
+| 4 | Yellow | #ffee33 |
+| 5 | Purple | #ff44ff |
+| 6 | Teal | #33ffff |
+| 7 | Orange | #ffaa33 |
+| 8 | Deep Purple | #9933ff |
+| 9 | Hot Pink | #ff66aa |
+| 10 | Olive | #aadd33 |
 
 ## Building Requirements
 
@@ -636,8 +667,6 @@ CC = Castle center (was town)
 
 ## Future Considerations
 
-- Army attack capability in battle mode
 - SVG icons to replace PNG + filter approach
 - Undo/redo system
 - Multiple map support
-- Additional object types

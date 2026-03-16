@@ -481,7 +481,12 @@ html, body {
   grid-template-columns: repeat(3, 1fr);
 }
 
-.team-stats.team-stats-3col .team-stat-value {
+.team-stats.team-stats-4col {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.team-stats.team-stats-3col .team-stat-value,
+.team-stats.team-stats-4col .team-stat-value {
   font-size: 22px;
 }
 
@@ -797,6 +802,72 @@ html, body {
   color: var(--text-primary);
 }
 
+/* Fleet Passenger Panel */
+.fleet-passenger-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-dark);
+  border: 2px solid var(--gold-dark);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  z-index: 3000;
+  min-width: 220px;
+  max-height: 400px;
+  box-shadow: var(--shadow-lg);
+}
+
+.fleet-passenger-title {
+  color: var(--gold);
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: var(--spacing-sm);
+  text-align: center;
+}
+
+.fleet-passenger-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.fleet-passenger-item {
+  background: var(--bg-medium);
+  border: 1px solid var(--border-dark);
+  color: var(--text-primary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.fleet-passenger-item:hover {
+  border-color: var(--gold-dark);
+  background: var(--bg-light);
+}
+
+.fleet-passenger-cancel {
+  width: 100%;
+  margin-top: var(--spacing-sm);
+  background: none;
+  border: 1px solid var(--border-dark);
+  color: var(--text-muted);
+  padding: var(--spacing-xs);
+  cursor: pointer;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast);
+}
+
+.fleet-passenger-cancel:hover {
+  color: var(--text-primary);
+}
+
 .player-remove {
   background: none;
   border: none;
@@ -1109,6 +1180,18 @@ html, body {
   50% {
     filter: drop-shadow(0 0 12px rgba(80, 200, 255, 1));
   }
+}
+
+.hex.attack-in-range {
+  fill: rgba(255, 60, 60, 0.25) !important;
+  stroke: rgba(255, 60, 60, 0.5) !important;
+  stroke-width: 1.5 !important;
+}
+
+.hex.move-in-range {
+  fill: rgba(80, 200, 255, 0.25) !important;
+  stroke: rgba(80, 200, 255, 0.5) !important;
+  stroke-width: 1.5 !important;
 }
 
 .hex.move-destination:hover {

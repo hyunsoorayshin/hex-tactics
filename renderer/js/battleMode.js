@@ -30,6 +30,7 @@ function clearBattleSelection() {
   selectedAttacker = null;
   battlePhase = battleMode ? 'select_attacker' : null;
   updateBattleHint();
+  clearAttackRange();
   // Remove selection highlight
   document.querySelectorAll('.battle-selected').forEach(el => el.classList.remove('battle-selected'));
 }
@@ -70,7 +71,7 @@ function updateBattleHint() {
     hint.textContent = `Select target for ${name} to attack`;
     hint.classList.add('interaction');
   } else {
-    hint.textContent = 'Select a player or ship with passenger to attack';
+    hint.textContent = 'Select a player, army, ship, or fleet to attack';
     hint.classList.remove('interaction');
   }
 }
@@ -115,26 +116,49 @@ function getAttackerAtHex(hexKey) {
       teamId,
       playerId,
       player,
-      name: player.name
+      name: player.name,
+      range: PLAYER_ATTACK_RANGE
     };
   }
 
-  // Check for ship with passenger
-  const ship = GameState.hexObjects[hexKey];
-  if (ship?.type === 'ship' && ship.passenger) {
-    const passengerTeam = GameState.teams[ship.passenger.teamId];
-    const passenger = passengerTeam?.players[ship.passenger.playerId];
-    if (passenger) {
-      return {
-        type: 'ship_with_passenger',
-        hexKey,
-        teamId: ship.teamId,
-        shipData: ship,
-        passenger: ship.passenger,
-        passengerData: passenger,
-        name: `${ship.passenger.name} (on ship)`
-      };
-    }
+  // Check for hex objects that can attack
+  const obj = GameState.hexObjects[hexKey];
+  if (obj?.type === 'army') {
+    return {
+      type: 'army',
+      hexKey,
+      teamId: obj.teamId,
+      data: obj,
+      name: 'Army',
+      attack: 10,
+      range: ATTACK_RANGE.army
+    };
+  }
+
+  if (obj?.type === 'ship') {
+    return {
+      type: 'ship',
+      hexKey,
+      teamId: obj.teamId,
+      data: obj,
+      name: obj.passenger ? `Ship (${obj.passenger.name})` : 'Ship',
+      attack: 200,
+      range: ATTACK_RANGE.ship
+    };
+  }
+
+  if (obj?.type === 'fleet') {
+    const passengers = obj.passengers || [];
+    const names = passengers.length > 0 ? ` (${passengers.length} aboard)` : '';
+    return {
+      type: 'fleet',
+      hexKey,
+      teamId: obj.teamId,
+      data: obj,
+      name: `Fleet${names}`,
+      attack: 300,
+      range: ATTACK_RANGE.fleet
+    };
   }
 
   return null;
@@ -199,7 +223,8 @@ function selectAttacker(hexKey, attacker) {
   battlePhase = 'select_target';
   updateBattleHint();
   highlightAttacker(hexKey);
-  showNotification(`${attacker.name} ready to attack`);
+  showAttackRange(hexKey, attacker.range);
+  showNotification(`${attacker.name} ready to attack (range: ${attacker.range})`);
 }
 
 function getAttackerStats(attacker) {
@@ -211,13 +236,13 @@ function getAttackerStats(attacker) {
       health: currentHealth,
       maxHealth: stats.health
     };
-  } else if (attacker.type === 'ship_with_passenger') {
-    const stats = getPlayerStats(getEffectiveGold(attacker.passengerData));
-    const currentHealth = attacker.passengerData.health !== undefined ? attacker.passengerData.health : stats.health;
+  } else if (attacker.type === 'army' || attacker.type === 'ship' || attacker.type === 'fleet') {
+    const maxHealth = OBJECT_HEALTH[attacker.type] || 100;
+    const currentHealth = attacker.data.health !== undefined ? attacker.data.health : maxHealth;
     return {
-      attack: stats.attack,
+      attack: attacker.attack,
       health: currentHealth,
-      maxHealth: stats.health
+      maxHealth: maxHealth
     };
   }
   return { attack: 0, health: 0, maxHealth: 0 };
@@ -262,6 +287,16 @@ function executeAttack(targetKey, isEdge = false) {
     return;
   }
 
+  // Check attack range
+  const attackRange = selectedAttacker.range || 1;
+  const distKey = isEdge ? targetKey.split(',').slice(0, 2).join(',') : targetKey;
+  const distance = hexDistance(selectedAttacker.hexKey, distKey);
+  if (distance > attackRange) {
+    showNotification(`Out of range! (${distance} hexes, max ${attackRange})`, 'error');
+    clearBattleSelection();
+    return;
+  }
+
   const attackerStats = getAttackerStats(selectedAttacker);
   const targetStats = getTargetStats(target);
 
@@ -274,37 +309,24 @@ function executeAttack(targetKey, isEdge = false) {
   if (selectedAttacker.type === 'player') {
     attackerTeamId = selectedAttacker.teamId;
     attackerPlayerId = selectedAttacker.playerId;
-  } else if (selectedAttacker.type === 'ship_with_passenger') {
-    attackerTeamId = selectedAttacker.passenger?.teamId;
-    attackerPlayerId = selectedAttacker.passenger?.playerId;
-  }
-
-  // Get target's team/player ID for mutual damage stat tracking
-  let targetTeamId, targetPlayerId;
-  if (target.type === 'player') {
-    targetTeamId = target.teamId;
-    targetPlayerId = target.playerId;
+  } else if (selectedAttacker.type === 'army' || selectedAttacker.type === 'ship' || selectedAttacker.type === 'fleet') {
+    attackerTeamId = selectedAttacker.teamId;
+    attackerPlayerId = null;
   }
 
   // Apply damage to target
   const targetDamage = attackerStats.attack;
   applyDamage(target, targetDamage, attackerTeamId, attackerPlayerId);
 
-  let resultMessage = `${selectedAttacker.name} dealt ${targetDamage} damage to ${target.name}`;
-
-  // If target is a player, mutual damage (target fights back)
-  if (target.type === 'player') {
-    const attackerDamage = targetStats.attack;
-    applyDamage(selectedAttacker, attackerDamage, targetTeamId, targetPlayerId);
-    resultMessage += ` and took ${attackerDamage} damage back`;
-  }
-
-  showNotification(resultMessage);
+  showNotification(`${selectedAttacker.name} dealt ${targetDamage} damage to ${target.name}`);
 
   // Re-render everything
   renderAllHealthBars();
   renderPlayerMarkers();
   renderShips();
+  renderFleets();
+  renderWagons();
+  renderMinerals();
   renderArmies();
   renderTowns();
   renderCastles();
@@ -353,51 +375,6 @@ function applyDamage(target, damage, attackerTeamId, attackerPlayerId) {
 
     if (player.health <= 0) {
       destroyPlayer(target.teamId, target.playerId, target.name, attackerTeamId, attackerPlayerId);
-    }
-  } else if (target.type === 'ship_with_passenger') {
-    // For ship with passenger being attacked as attacker taking damage
-    const passenger = target.passengerData;
-    if (!passenger) return;
-
-    passenger.health -= damage;
-
-    if (passenger.health <= 0) {
-      // Passenger dies - track stats
-      const passengerTeamId = target.passenger?.teamId;
-      const passengerPlayerId = target.passenger?.playerId;
-      if (passengerTeamId !== undefined && passengerPlayerId) {
-        const passengerPlayer = GameState.teams[passengerTeamId]?.players[passengerPlayerId];
-        if (passengerPlayer) {
-          passengerPlayer.deaths = (passengerPlayer.deaths || 0) + 1;
-        }
-        // Credit kill to attacker
-        if (attackerTeamId !== undefined && attackerPlayerId) {
-          const attacker = GameState.teams[attackerTeamId]?.players[attackerPlayerId];
-          if (attacker) {
-            attacker.kills = (attacker.kills || 0) + 1;
-          }
-        }
-      }
-
-      // Also destroy ship - track objectsLost per type
-      const ship = GameState.hexObjects[target.hexKey];
-      if (ship) {
-        if (ship.teamId !== undefined && GameState.teams[ship.teamId]) {
-          const team = GameState.teams[ship.teamId];
-          if (!team.objectsLost) team.objectsLost = {};
-          team.objectsLost.ship = (team.objectsLost.ship || 0) + 1;
-        }
-        // Credit ship kill to attacker
-        if (attackerTeamId !== undefined && attackerPlayerId) {
-          const attacker = GameState.teams[attackerTeamId]?.players[attackerPlayerId];
-          if (attacker) {
-            attacker.kills = (attacker.kills || 0) + 1;
-          }
-        }
-        delete ship.passenger;
-        delete GameState.hexObjects[target.hexKey];
-        showNotification(`${target.name} and ship destroyed!`);
-      }
     }
   } else if (target.isObject) {
     const obj = target.data || GameState.hexObjects[target.hexKey];
@@ -465,6 +442,34 @@ function destroyObject(hexKey, type, name, ownerTeamId, attackerTeamId, attacker
       const { teamId, playerId, name: passengerName } = ship.passenger;
       destroyPlayer(teamId, playerId, passengerName, attackerTeamId, attackerPlayerId);
       showNotification(`${passengerName} went down with the ship!`);
+    }
+  } else if (type === 'mineral') {
+    // Track mineral destroyed for attacker's team
+    if (attackerTeamId !== undefined && GameState.teams[attackerTeamId]) {
+      const team = GameState.teams[attackerTeamId];
+      team.mineralsDestroyed = (team.mineralsDestroyed || 0) + 1;
+      showNotification(`Team ${attackerTeamId === 0 ? 10 : attackerTeamId} earned ${MINERAL_REWARD}g from mineral!`);
+    }
+  } else if (type === 'wagon') {
+    const wagon = GameState.hexObjects[hexKey];
+    if (wagon?.passengers) {
+      for (const p of wagon.passengers) {
+        if (p.kind === 'player') {
+          destroyPlayer(p.teamId, p.playerId, p.name, attackerTeamId, attackerPlayerId);
+          showNotification(`${p.name} went down with the wagon!`);
+        }
+      }
+    }
+  } else if (type === 'fleet') {
+    const fleet = GameState.hexObjects[hexKey];
+    if (fleet?.passengers) {
+      for (const p of fleet.passengers) {
+        if (p.kind === 'player') {
+          destroyPlayer(p.teamId, p.playerId, p.name, attackerTeamId, attackerPlayerId);
+          showNotification(`${p.name} went down with the fleet!`);
+        }
+        // Armies on fleet are simply lost (no separate tracking)
+      }
     }
   } else if (type === 'castle') {
     // Only remove castle center, territory remains per rules
@@ -678,4 +683,24 @@ function renderAllHealthBars() {
       renderEdgeHealthBar(edgeKey, obj.health, obj.maxHealth);
     }
   }
+}
+
+// ============================================
+// Attack Range Highlight
+// ============================================
+
+function showAttackRange(fromHexKey, range) {
+  clearAttackRange();
+  document.querySelectorAll('.hex[data-hex]').forEach(hexEl => {
+    const hexKey = hexEl.getAttribute('data-hex');
+    if (hexKey === fromHexKey) return;
+    const dist = hexDistance(fromHexKey, hexKey);
+    if (dist <= range) {
+      hexEl.classList.add('attack-in-range');
+    }
+  });
+}
+
+function clearAttackRange() {
+  document.querySelectorAll('.attack-in-range').forEach(el => el.classList.remove('attack-in-range'));
 }

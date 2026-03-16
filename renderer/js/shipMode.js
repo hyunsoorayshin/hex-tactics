@@ -75,7 +75,7 @@ function updateShipHint() {
     hint.textContent = 'Click a hex to disembark the passenger';
     hint.classList.add('interaction');
   } else {
-    hint.textContent = 'Click to place. Shift+click to board/disembark. Cmd+click to remove.';
+    hint.textContent = 'Click to place. Shift: board | Option: disembark | Cmd: remove';
     hint.classList.remove('interaction');
   }
 }
@@ -84,7 +84,7 @@ function updateShipHint() {
 // Ship Placement Logic
 // ============================================
 
-function onShipModeHexClick(hexKey, element, shiftKey, metaKey) {
+function onShipModeHexClick(hexKey, element, shiftKey, metaKey, altKey) {
   // If in interaction mode, handle boarding/disembarking
   if (shipInteractionMode === 'boarding') {
     handleBoarding(hexKey);
@@ -101,9 +101,28 @@ function onShipModeHexClick(hexKey, element, shiftKey, metaKey) {
 
   // Check if ship already exists here
   if (existingShip?.type === 'ship') {
-    // Shift+click to enter interaction mode
     if (shiftKey) {
-      enterShipInteraction(hexKey, existingShip);
+      // Shift+click to board
+      if (existingShip.passenger) {
+        showNotification('Ship already has a passenger!', 'error');
+      } else {
+        selectedShipHex = hexKey;
+        shipInteractionMode = 'boarding';
+        showNotification('Select a player to board');
+        updateShipHint();
+        renderShips();
+      }
+    } else if (altKey) {
+      // Option+click to disembark
+      if (!existingShip.passenger) {
+        showNotification('No passenger to disembark', 'error');
+      } else {
+        selectedShipHex = hexKey;
+        shipInteractionMode = 'disembarking';
+        showNotification(`Select destination for ${existingShip.passenger.name}`);
+        updateShipHint();
+        renderShips();
+      }
     } else if (metaKey) {
       // Cmd+click to remove (only if no passenger)
       if (existingShip.passenger) {
@@ -113,30 +132,13 @@ function onShipModeHexClick(hexKey, element, shiftKey, metaKey) {
         showNotification('Ship removed');
       }
     } else {
-      showNotification('Shift+click to board/disembark. Cmd+click to remove.', 'error');
+      showNotification('Shift: board | Option: disembark | Cmd: remove', 'error');
     }
   } else {
     // Place new ship (no land ownership check)
     placeShip(hexKey, currentTeam);
     showNotification('Ship placed!');
   }
-}
-
-function enterShipInteraction(hexKey, ship) {
-  selectedShipHex = hexKey;
-
-  if (ship.passenger) {
-    // Ship has passenger - enter disembarking mode
-    shipInteractionMode = 'disembarking';
-    showNotification(`Select destination for ${ship.passenger.name}`);
-  } else {
-    // Ship is empty - enter boarding mode
-    shipInteractionMode = 'boarding';
-    showNotification('Select a player to board');
-  }
-
-  updateShipHint();
-  renderShips(); // Re-render to show selected state
 }
 
 function handleBoarding(hexKey) {
@@ -268,6 +270,11 @@ function addShipMarker(hexKey, teamId, passenger, isSelected) {
     e.stopPropagation();
     const metaKey = e.metaKey || e.ctrlKey;
 
+    if (isLandMode()) {
+      onLandClick(hexKey, null);
+      return;
+    }
+
     // Delegate to other modes if active
     if (isBattleMode()) {
       onBattleModeHexClick(hexKey, null, e.shiftKey);
@@ -280,25 +287,7 @@ function addShipMarker(hexKey, teamId, passenger, isSelected) {
 
     // Ship mode handling
     if (isShipMode()) {
-      if (shipInteractionMode) {
-        // In interaction mode, treat as hex click
-        onShipModeHexClick(hexKey, null, e.shiftKey, metaKey);
-      } else if (e.shiftKey) {
-        // Shift+click to interact
-        const ship = GameState.hexObjects[hexKey];
-        if (ship) enterShipInteraction(hexKey, ship);
-      } else if (metaKey) {
-        // Cmd+click to remove (if no passenger)
-        const ship = GameState.hexObjects[hexKey];
-        if (ship?.passenger) {
-          showNotification('Disembark passenger first!', 'error');
-        } else {
-          removeShip(hexKey);
-          showNotification('Ship removed');
-        }
-      } else {
-        showNotification('Shift+click to board/disembark. Cmd+click to remove.', 'error');
-      }
+      onShipModeHexClick(hexKey, null, e.shiftKey, metaKey, e.altKey);
     }
   });
 

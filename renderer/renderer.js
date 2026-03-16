@@ -87,6 +87,33 @@ window.addEventListener('keydown', (e) => {
       updateStatus();
       return;
     }
+    if (isFleetMode()) {
+      if (getFleetInteractionMode()) {
+        clearFleetInteraction();
+        renderFleets();
+        showNotification('Cancelled');
+        return;
+      }
+      toggleFleetMode();
+      updateStatus();
+      return;
+    }
+    if (isWagonMode()) {
+      if (getWagonInteractionMode()) {
+        clearWagonInteraction();
+        renderWagons();
+        showNotification('Cancelled');
+        return;
+      }
+      toggleWagonMode();
+      updateStatus();
+      return;
+    }
+    if (isMineralMode()) {
+      toggleMineralMode();
+      updateStatus();
+      return;
+    }
     if (isBattleMode()) {
       // If in target selection phase, cancel it first
       if (getBattlePhase() === 'select_target') {
@@ -127,6 +154,9 @@ window.addEventListener('keydown', (e) => {
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
     if (isBattleMode()) toggleBattleMode();
     if (isMoveMode()) toggleMoveMode();
     toggleLandMode();
@@ -143,6 +173,9 @@ window.addEventListener('keydown', (e) => {
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
     if (isBattleMode()) toggleBattleMode();
     if (isMoveMode()) toggleMoveMode();
     togglePlayerMode();
@@ -159,6 +192,9 @@ window.addEventListener('keydown', (e) => {
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
     if (isBattleMode()) toggleBattleMode();
     if (isMoveMode()) toggleMoveMode();
     toggleCastleMode();
@@ -175,6 +211,9 @@ window.addEventListener('keydown', (e) => {
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
     if (isBattleMode()) toggleBattleMode();
     if (isMoveMode()) toggleMoveMode();
     toggleBridgeMode();
@@ -191,6 +230,9 @@ window.addEventListener('keydown', (e) => {
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
     if (isBattleMode()) toggleBattleMode();
     if (isMoveMode()) toggleMoveMode();
     toggleArmyMode();
@@ -207,6 +249,9 @@ window.addEventListener('keydown', (e) => {
     if (isArmyMode()) toggleArmyMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
     if (isBattleMode()) toggleBattleMode();
     if (isMoveMode()) toggleMoveMode();
     toggleTownMode();
@@ -223,6 +268,9 @@ window.addEventListener('keydown', (e) => {
     if (isArmyMode()) toggleArmyMode();
     if (isTownMode()) toggleTownMode();
     if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
     if (isBattleMode()) toggleBattleMode();
     if (isMoveMode()) toggleMoveMode();
     toggleWallMode();
@@ -239,11 +287,74 @@ window.addEventListener('keydown', (e) => {
     if (isArmyMode()) toggleArmyMode();
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
     if (isBattleMode()) toggleBattleMode();
     if (isMoveMode()) toggleMoveMode();
     toggleShipMode();
     updateStatus();
     console.log('Ship mode:', isShipMode() ? 'ON' : 'OFF');
+  }
+
+  // F - toggle fleet mode
+  if (e.key === 'f' || e.key === 'F') {
+    if (isLandMode()) toggleLandMode();
+    if (isPlayerMode()) togglePlayerMode();
+    if (isCastleMode()) toggleCastleMode();
+    if (isBridgeMode()) toggleBridgeMode();
+    if (isArmyMode()) toggleArmyMode();
+    if (isTownMode()) toggleTownMode();
+    if (isWallMode()) toggleWallMode();
+    if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
+    if (isBattleMode()) toggleBattleMode();
+    if (isMoveMode()) toggleMoveMode();
+    toggleFleetMode();
+    updateStatus();
+    console.log('Fleet mode:', isFleetMode() ? 'ON' : 'OFF');
+  }
+
+  // G - toggle wagon mode
+  if (e.key === 'g' || e.key === 'G') {
+    if (isLandMode()) toggleLandMode();
+    if (isPlayerMode()) togglePlayerMode();
+    if (isCastleMode()) toggleCastleMode();
+    if (isBridgeMode()) toggleBridgeMode();
+    if (isArmyMode()) toggleArmyMode();
+    if (isTownMode()) toggleTownMode();
+    if (isWallMode()) toggleWallMode();
+    if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
+    if (isBattleMode()) toggleBattleMode();
+    if (isMoveMode()) toggleMoveMode();
+    toggleWagonMode();
+    updateStatus();
+    console.log('Wagon mode:', isWagonMode() ? 'ON' : 'OFF');
+  }
+
+  // N - toggle mineral mode
+  if (e.key === 'n' || e.key === 'N') {
+    if (isLandMode()) toggleLandMode();
+    if (isPlayerMode()) togglePlayerMode();
+    if (isCastleMode()) toggleCastleMode();
+    if (isBridgeMode()) toggleBridgeMode();
+    if (isArmyMode()) toggleArmyMode();
+    if (isTownMode()) toggleTownMode();
+    if (isWallMode()) toggleWallMode();
+    if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
+    if (isBattleMode()) toggleBattleMode();
+    if (isMoveMode()) toggleMoveMode();
+    toggleMineralMode();
+    updateStatus();
+    console.log('Mineral mode:', isMineralMode() ? 'ON' : 'OFF');
   }
 
   // X - toggle battle mode
@@ -256,6 +367,9 @@ window.addEventListener('keydown', (e) => {
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
     if (isMoveMode()) toggleMoveMode();
     toggleBattleMode();
     updateStatus();
@@ -272,6 +386,9 @@ window.addEventListener('keydown', (e) => {
     if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
     if (isBattleMode()) toggleBattleMode();
     toggleMoveMode();
     updateStatus();

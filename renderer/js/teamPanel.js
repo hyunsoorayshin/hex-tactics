@@ -12,6 +12,8 @@ function getTeamAssetCounts(teamId) {
     town: 0,
     army: 0,
     ship: 0,
+    fleet: 0,
+    wagon: 0,
     bridge: 0
   };
 
@@ -22,6 +24,8 @@ function getTeamAssetCounts(teamId) {
       else if (obj.type === 'town') counts.town++;
       else if (obj.type === 'army') counts.army++;
       else if (obj.type === 'ship') counts.ship++;
+      else if (obj.type === 'fleet') counts.fleet++;
+      else if (obj.type === 'wagon') counts.wagon++;
       else if (obj.type === 'bridge') counts.bridge++;
     }
   }
@@ -60,7 +64,7 @@ function createTeamPanelHTML() {
 
       <div class="divider-medieval"></div>
 
-      <div class="team-stats team-stats-3col">
+      <div class="team-stats team-stats-4col">
         <div class="team-stat">
           <div class="team-stat-value" id="stat-merit">0</div>
           <div class="team-stat-label">Merit Points</div>
@@ -72,6 +76,10 @@ function createTeamPanelHTML() {
         <div class="team-stat">
           <div class="team-stat-value" id="stat-land">0</div>
           <div class="team-stat-label">Land</div>
+        </div>
+        <div class="team-stat">
+          <div class="team-stat-value" id="stat-minerals">0</div>
+          <div class="team-stat-label">Minerals (+<span id="stat-mineral-gold">0</span>g)</div>
         </div>
       </div>
 
@@ -106,6 +114,16 @@ function createTeamPanelHTML() {
             <span class="asset-icon">&#9973;</span>
             <span class="asset-value" id="asset-ship">0</span>
             <span class="asset-label">Ship</span>
+          </div>
+          <div class="asset-item">
+            <span class="asset-icon">&#9965;</span>
+            <span class="asset-value" id="asset-fleet">0</span>
+            <span class="asset-label">Fleet</span>
+          </div>
+          <div class="asset-item">
+            <span class="asset-icon">&#128722;</span>
+            <span class="asset-value" id="asset-wagon">0</span>
+            <span class="asset-label">Wagon</span>
           </div>
           <div class="asset-item">
             <span class="asset-icon">&#128739;</span>
@@ -180,6 +198,9 @@ function updateTeamPanel() {
   document.getElementById('stat-merit').textContent = GameState.getTeamGold(currentTeam);
   document.getElementById('stat-available').textContent = GameState.getTeamAvailableGold(currentTeam);
   document.getElementById('stat-land').textContent = GameState.getTeamLandCount(currentTeam);
+  const mineralsDestroyed = GameState.teams[currentTeam].mineralsDestroyed || 0;
+  document.getElementById('stat-minerals').textContent = mineralsDestroyed;
+  document.getElementById('stat-mineral-gold').textContent = mineralsDestroyed * MINERAL_REWARD;
 
   // Update asset counts with lost numbers in parentheses
   const assetCounts = getTeamAssetCounts(currentTeam);
@@ -194,6 +215,8 @@ function updateTeamPanel() {
   document.getElementById('asset-town').textContent = formatAsset(assetCounts.town, lost.town || 0);
   document.getElementById('asset-army').textContent = formatAsset(assetCounts.army, lost.army || 0);
   document.getElementById('asset-ship').textContent = formatAsset(assetCounts.ship, lost.ship || 0);
+  document.getElementById('asset-fleet').textContent = formatAsset(assetCounts.fleet, lost.fleet || 0);
+  document.getElementById('asset-wagon').textContent = formatAsset(assetCounts.wagon, lost.wagon || 0);
   document.getElementById('asset-bridge').textContent = formatAsset(assetCounts.bridge, lost.bridge || 0);
 
   // Update player list

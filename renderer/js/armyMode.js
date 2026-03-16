@@ -137,12 +137,24 @@ function addArmyMarker(hexKey, teamId) {
     const metaKey = e.metaKey || e.ctrlKey;
 
     // Delegate to other modes if active
+    if (isLandMode()) {
+      onLandClick(hexKey, null);
+      return;
+    }
     if (isBattleMode()) {
       onBattleModeHexClick(hexKey, null, e.shiftKey);
       return;
     }
     if (isMoveMode()) {
       onMoveModeHexClick(hexKey, null, e.shiftKey);
+      return;
+    }
+    if (isFleetMode() && fleetInteractionMode === 'boarding') {
+      handleFleetBoarding(hexKey);
+      return;
+    }
+    if (isWagonMode() && wagonInteractionMode === 'boarding') {
+      handleWagonBoarding(hexKey);
       return;
     }
 

@@ -62,6 +62,15 @@ function getHexCorners(hex) {
   return corners;
 }
 
+// Hex distance (axial coordinates) using cube distance formula
+function hexDistance(hexKeyA, hexKeyB) {
+  const [aq, ar] = hexKeyA.split(',').map(Number);
+  const [bq, br] = hexKeyB.split(',').map(Number);
+  const dq = aq - bq;
+  const dr = ar - br;
+  return (Math.abs(dq) + Math.abs(dq + dr) + Math.abs(dr)) / 2;
+}
+
 // Get the 6 neighboring hexes (axial coordinates)
 const HEX_DIRECTIONS = [
   { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
@@ -141,7 +150,7 @@ function generateHexGrid() {
       polygon.addEventListener('click', (e) => {
         if (!isSpacePressed()) {
           e.stopPropagation();
-          onHexClick(hex, polygon, e.shiftKey, e.metaKey || e.ctrlKey);
+          onHexClick(hex, polygon, e.shiftKey, e.metaKey || e.ctrlKey, e.altKey);
         }
       });
 
@@ -177,7 +186,7 @@ function generateHexGrid() {
 }
 
 // Hex click handler
-function onHexClick(hex, element, shiftKey, metaKey) {
+function onHexClick(hex, element, shiftKey, metaKey, altKey) {
   const hexKey = hex.toString();
 
   // Handle building housing mode clicks (takes priority over other modes)
@@ -218,7 +227,15 @@ function onHexClick(hex, element, shiftKey, metaKey) {
     onTownModeHexClick(hexKey, element, metaKey);
   } else if (isShipMode()) {
     // Delegate to ship mode module (pass shiftKey for boarding/disembarking)
-    onShipModeHexClick(hexKey, element, shiftKey, metaKey);
+    onShipModeHexClick(hexKey, element, shiftKey, metaKey, altKey);
+  } else if (isFleetMode()) {
+    // Delegate to fleet mode module
+    onFleetModeHexClick(hexKey, element, shiftKey, metaKey, altKey);
+  } else if (isWagonMode()) {
+    // Delegate to wagon mode module
+    onWagonModeHexClick(hexKey, element, shiftKey, metaKey, altKey);
+  } else if (isMineralMode()) {
+    onMineralModeHexClick(hexKey, element, metaKey);
   } else if (isBattleMode()) {
     // Delegate to battle mode module
     onBattleModeHexClick(hexKey, element, shiftKey);

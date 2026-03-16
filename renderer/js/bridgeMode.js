@@ -190,7 +190,7 @@ function addBridgeMarker(hexKey, teamId, rotation) {
   const morphology = document.createElementNS('http://www.w3.org/2000/svg', 'feMorphology');
   morphology.setAttribute('in', 'SourceAlpha');
   morphology.setAttribute('operator', 'dilate');
-  morphology.setAttribute('radius', '2');
+  morphology.setAttribute('radius', '1');
   morphology.setAttribute('result', 'dilated');
 
   // Fill with team color

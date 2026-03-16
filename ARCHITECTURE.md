@@ -37,6 +37,7 @@ rayhaven2/
         ├── townMode.js     # Town placement on owned land
         ├── wallMode.js     # Wall placement on hex edges
         ├── shipMode.js     # Ship placement (any hex)
+        ├── catapultMode.js # Catapult placement (siege unit)
         ├── fleetMode.js    # Fleet placement (10 passengers)
         ├── wagonMode.js    # Wagon placement (5 passengers)
         ├── mineralMode.js  # Mineral placement (battle objectives)
@@ -304,6 +305,7 @@ Application entry point:
   - `C` - Toggle castle mode
   - `B` - Toggle bridge mode
   - `A` - Toggle army mode
+  - `D` - Toggle catapult mode
   - `T` - Toggle town mode
   - `W` - Toggle wall mode
   - `S` - Toggle ship mode
@@ -358,20 +360,21 @@ Scripts must load in this order (defined in `index.html`):
 4. `castleMode.js` - Depends on: gameState, hexGrid (getHexAndNeighbors, getOuterRing)
 5. `bridgeMode.js` - Depends on: gameState
 6. `armyMode.js` - Depends on: gameState
-7. `townMode.js` - Depends on: gameState, hexGrid (getHexAndNeighbors)
-8. `wallMode.js` - Depends on: gameState, hexGrid (Hex, getHexCorners)
-9. `shipMode.js` - Depends on: gameState
-10. `fleetMode.js` - Depends on: gameState
-11. `wagonMode.js` - Depends on: gameState
-12. `mineralMode.js` - Depends on: gameState
-13. `battleMode.js` - Depends on: gameState, playerMode (getPlayerStats)
-14. `moveMode.js` - Depends on: gameState, hexGrid (hexDistance)
-15. `hexGrid.js` - Depends on: gameState, all mode modules
-16. `panZoom.js` - Depends on: hexGrid (MAP_WIDTH/HEIGHT)
-17. `teamPanel.js` - Depends on: gameState, playerMode
-18. `saveLoad.js` - Depends on: gameState, all mode modules, ui, battleMode (renderAllHealthBars)
-19. `ui.js` - Depends on: gameState, all mode modules
-20. `renderer.js` - Depends on: all modules
+7. `catapultMode.js` - Depends on: gameState
+8. `townMode.js` - Depends on: gameState, hexGrid (getHexAndNeighbors)
+9. `wallMode.js` - Depends on: gameState, hexGrid (Hex, getHexCorners)
+10. `shipMode.js` - Depends on: gameState
+11. `fleetMode.js` - Depends on: gameState
+12. `wagonMode.js` - Depends on: gameState
+13. `mineralMode.js` - Depends on: gameState
+14. `battleMode.js` - Depends on: gameState, playerMode (getPlayerStats)
+15. `moveMode.js` - Depends on: gameState, hexGrid (hexDistance)
+16. `hexGrid.js` - Depends on: gameState, all mode modules
+17. `panZoom.js` - Depends on: hexGrid (MAP_WIDTH/HEIGHT)
+18. `teamPanel.js` - Depends on: gameState, playerMode
+19. `saveLoad.js` - Depends on: gameState, all mode modules, ui, battleMode (renderAllHealthBars)
+20. `ui.js` - Depends on: gameState, all mode modules
+21. `renderer.js` - Depends on: all modules
 
 ## Data Flow
 
@@ -420,6 +423,7 @@ Teacher updates CSV grades
 | C | Toggle castle mode |
 | B | Toggle bridge mode |
 | A | Toggle army mode |
+| D | Toggle catapult mode |
 | T | Toggle town mode |
 | W | Toggle wall mode |
 | S | Toggle ship mode |
@@ -580,6 +584,7 @@ Where:
 | Object | HP | ATK | Cost | Move | Range | Icon Size |
 |--------|-----|-----|------|------|-------|-----------|
 | Army | 20 | 10 | 200g | 2 | 1 | Small (38px) |
+| Catapult | 10 | 50 | 200g | 3 | 3 | Small (38px) |
 | Ship | 500 | 200 | 100g | 15 | 2 | Small (38px) |
 | Wagon | 100 | 0 | 150g | 7 | 0 | Medium (48px) |
 | Fleet | 1000 | 300 | 400g | 10 | 2 | Medium (48px) |
@@ -598,7 +603,7 @@ Base speed 1 + 1 per every 2 rank tiers (max 5 at Conqueror/Overlord).
 
 | Tier | Size | Types |
 |------|------|-------|
-| Small | 38px | Player, Army, Ship |
+| Small | 38px | Player, Army, Catapult, Ship |
 | Medium | 48px | Bridge, Fleet, Wagon, Mineral |
 | Large | 64px | Town |
 | XLarge | 100px | Castle |

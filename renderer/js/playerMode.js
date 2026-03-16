@@ -8,16 +8,16 @@ let selectedPlayerId = null;
 // Rank definitions based on gold (icons in assets/icons/)
 // Rank tiers based on level
 const RANKS = [
-  { minLevel: 1, maxLevel: 2, name: 'Recruit', icon: 'recruit.png' },
-  { minLevel: 3, maxLevel: 4, name: 'Private', icon: 'private.png' },
-  { minLevel: 5, maxLevel: 7, name: 'Sergeant', icon: 'sergeant.png' },
-  { minLevel: 8, maxLevel: 10, name: 'Captain', icon: 'captain.png' },
-  { minLevel: 11, maxLevel: 14, name: 'Commander', icon: 'commander.png' },
-  { minLevel: 15, maxLevel: 19, name: 'General', icon: 'general.png' },
-  { minLevel: 20, maxLevel: 29, name: 'Marshal', icon: 'marshal.png' },
-  { minLevel: 30, maxLevel: 39, name: 'Warlord', icon: 'warlord.png' },
-  { minLevel: 40, maxLevel: 49, name: 'Conqueror', icon: 'conqueror.png' },
-  { minLevel: 50, maxLevel: Infinity, name: 'Overlord', icon: 'overlord.png' },
+  { minLevel: 1, maxLevel: 3, name: 'Recruit', icon: 'recruit.png' },
+  { minLevel: 4, maxLevel: 6, name: 'Private', icon: 'private.png' },
+  { minLevel: 7, maxLevel: 10, name: 'Sergeant', icon: 'sergeant.png' },
+  { minLevel: 11, maxLevel: 15, name: 'Captain', icon: 'captain.png' },
+  { minLevel: 16, maxLevel: 20, name: 'Commander', icon: 'commander.png' },
+  { minLevel: 21, maxLevel: 28, name: 'General', icon: 'general.png' },
+  { minLevel: 29, maxLevel: 38, name: 'Marshal', icon: 'marshal.png' },
+  { minLevel: 39, maxLevel: 49, name: 'Warlord', icon: 'warlord.png' },
+  { minLevel: 50, maxLevel: 64, name: 'Conqueror', icon: 'conqueror.png' },
+  { minLevel: 65, maxLevel: Infinity, name: 'Overlord', icon: 'overlord.png' },
 ];
 
 // Level system: gold acts as XP with increasing cost per level

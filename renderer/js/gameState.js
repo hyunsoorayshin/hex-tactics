@@ -247,6 +247,29 @@ const GameState = {
     return players;
   },
 
+  // Transfer player to another team (preserves all stats)
+  transferPlayer(fromTeamId, toTeamId, playerId) {
+    const player = this.teams[fromTeamId]?.players[playerId];
+    if (!player || !this.teams[toTeamId]) return false;
+
+    // Remove from map if placed
+    if (player.position) {
+      for (const obj of Object.values(this.hexObjects)) {
+        if (obj.passenger && obj.passenger.playerId === playerId && obj.passenger.teamId === fromTeamId) {
+          delete obj.passenger;
+        }
+        if (obj.housed && obj.housed.playerId === playerId && obj.housed.teamId === fromTeamId) {
+          delete obj.housed;
+        }
+      }
+      player.position = null;
+    }
+
+    this.teams[toTeamId].players[playerId] = player;
+    delete this.teams[fromTeamId].players[playerId];
+    return true;
+  },
+
   // Remove player from team
   removePlayer(teamId, playerId) {
     if (this.teams[teamId]?.players[playerId]) {

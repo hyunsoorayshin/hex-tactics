@@ -85,6 +85,7 @@ Core state management and constants:
 - Current team selection state
 - Helper functions:
   - `getCurrentTeam()`, `setCurrentTeam()`
+  - `transferPlayer(fromTeamId, toTeamId, playerId)` - Move player between teams preserving all stats
   - `getTeamGold()` - Sum of all player effective gold (merit points)
   - `getTeamObjectsCost()` - Cost of currently placed objects
   - `getTeamLostObjectsCost()` - Cost of destroyed objects
@@ -111,11 +112,11 @@ Player placement and level system:
   - `getPlayerLevel(gold)` - Triangular XP curve (each level costs more gold)
   - `getGoldForLevel(level)` - Gold threshold: `level × (level-1) × 50`
   - `getPlayerStats(gold)` - Returns `{ health: 10 + level×5, attack: 5 + level×3, level }`
-  - `refreshAllPlayerStats()` - Recalculates all player stats, scales health proportionally
+  - `refreshAllPlayerStats()`, `transferPlayer()` - Recalculates all player stats, scales health proportionally
 - **Military Rank Tiers** (based on level, determines icon):
-  - Recruit (Lv 1-2), Private (Lv 3-4), Sergeant (Lv 5-7), Captain (Lv 8-10)
-  - Commander (Lv 11-14), General (Lv 15-19), Marshal (Lv 20-29)
-  - Warlord (Lv 30-39), Conqueror (Lv 40-49), Overlord (Lv 50+)
+  - Recruit (Lv 1-3), Private (Lv 4-6), Sergeant (Lv 7-10), Captain (Lv 11-15)
+  - Commander (Lv 16-20), General (Lv 21-28), Marshal (Lv 29-38)
+  - Warlord (Lv 39-49), Conqueror (Lv 50-64), Overlord (Lv 65+)
 - **Death/Revival System:**
   - Dead players shown with skull icon and "Dead" status in panel
   - Dead players can only be placed at team's own town or castle
@@ -530,16 +531,16 @@ Ranks determine the player's icon and are based on level:
 
 | Rank | Level Range | Icon |
 |------|------------|------|
-| Recruit | 1-2 | recruit.png |
-| Private | 3-4 | private.png |
-| Sergeant | 5-7 | sergeant.png |
-| Captain | 8-10 | captain.png |
-| Commander | 11-14 | commander.png |
-| General | 15-19 | general.png |
-| Marshal | 20-29 | marshal.png |
-| Warlord | 30-39 | warlord.png |
-| Conqueror | 40-49 | conqueror.png |
-| Overlord | 50+ | overlord.png |
+| Recruit | 1-3 | recruit.png |
+| Private | 4-6 | private.png |
+| Sergeant | 7-10 | sergeant.png |
+| Captain | 11-15 | captain.png |
+| Commander | 16-20 | commander.png |
+| General | 21-28 | general.png |
+| Marshal | 29-38 | marshal.png |
+| Warlord | 39-49 | warlord.png |
+| Conqueror | 50-64 | conqueror.png |
+| Overlord | 65+ | overlord.png |
 
 ## Economy System
 

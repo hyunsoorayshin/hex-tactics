@@ -238,6 +238,13 @@ function renderPlayerList() {
         <span class="player-stat-badge deaths" title="Deaths">${player.deaths || 0}D</span>
         <span class="player-stat-badge revives" title="Revives">${player.revives || 0}R</span>
       </div>
+      <select class="player-transfer" title="Transfer to another team">
+        <option value="">Move</option>
+        ${Object.entries(GameState.teams)
+          .filter(([id]) => parseInt(id) !== currentTeam)
+          .map(([id, team]) => `<option value="${id}">${id === '0' ? 10 : id}. ${team.name}</option>`)
+          .join('')}
+      </select>
       <button class="player-remove">&times;</button>
     </div>
   `;
@@ -258,6 +265,21 @@ function renderPlayerList() {
 
     item.querySelector('.honor-btn.dishonor').addEventListener('click', () => {
       applyHonor(playerId, false);
+    });
+
+    item.querySelector('.player-transfer').addEventListener('change', (e) => {
+      const targetTeam = parseInt(e.target.value);
+      if (isNaN(targetTeam)) return;
+      const player = GameState.teams[currentTeam]?.players[playerId];
+      if (!player) return;
+      const targetName = GameState.teams[targetTeam].name;
+      if (GameState.transferPlayer(currentTeam, targetTeam, playerId)) {
+        showNotification(`${player.name} transferred to ${targetName}`);
+        renderPlayerMarkers();
+        renderAllHealthBars();
+        renderPlayerList();
+        updateTeamStats();
+      }
     });
 
     item.querySelector('.player-remove').addEventListener('click', () => {

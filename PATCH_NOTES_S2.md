@@ -1,5 +1,56 @@
 # Rayhaven Season 2 Patch Notes
 
+## How Your Gold Works
+
+Your **gold** comes from your grades. Every time your teacher imports grades, your gold updates automatically.
+
+### How You Earn Gold
+- Your test and homework scores are averaged together each week
+- That average becomes your base gold
+- **Bonuses:**
+  - Score 100 on Vocab Test, Science HW, Novel, or Grammar Test = **+50g each**
+  - **Grand Slam:** Score 100 on Vocab Test + Science HW + Novel = **+300g bonus**
+  - **Perfect Slam:** Score 100 on ALL major subjects = **+500g bonus**
+- **Penalties:**
+  - Vocab Test below 80 = -40g, below 70 = -60g, below 60 = -80g, below 50 = -100g
+  - Novel below 50 = -50g
+
+### Your Effective Gold (What Determines Your Level)
+```
+Your Gold = Base Gold (from grades) + Honor Bonuses - Dishonor Penalties
+```
+- Each **Honor** point your teacher gives you = **+50g**
+- Each **Dishonor** point = **-50g**
+- Your gold determines your **level**, which determines your **rank**, **HP**, **ATK**, and **movement speed**
+
+### Your Team's Available Gold (What Your Team Can Spend)
+Your team pools everyone's gold together to buy things:
+```
+Team Gold = All Players' Gold + Mineral Rewards - Land Cost - Object Costs - Lost Objects - Revive Costs
+```
+- **Land** costs 10g per hex
+- **Objects** (army, ship, castle, etc.) cost gold to place
+- If an object gets **destroyed**, the cost is still deducted
+- Each **player revive** costs 10g
+- Destroying **minerals** earns your team +500g each
+
+### Your Level
+Your gold acts as XP. The more gold you have, the higher your level.
+
+| Level | Gold Needed | HP | ATK |
+|-------|-------------|-----|-----|
+| 1 | 0 | 15 | 8 |
+| 5 | 1,000 | 35 | 20 |
+| 10 | 4,500 | 60 | 35 |
+| 15 | 10,500 | 85 | 50 |
+| 20 | 19,000 | 110 | 65 |
+| 30 | 43,500 | 160 | 95 |
+| 50 | 122,500 | 260 | 155 |
+
+Higher level = more HP, more ATK, faster movement, and a cooler rank icon.
+
+---
+
 ## New Units
 
 ### Catapult (D key)

@@ -115,7 +115,7 @@ Player placement and level system:
 - **Level System:**
   - `getPlayerLevel(gold)` - Triangular XP curve (each level costs more gold)
   - `getGoldForLevel(level)` - Gold threshold: `level × (level-1) × 50`
-  - `getPlayerStats(gold)` - Returns `{ health: 10 + level×5, attack: 5 + level×3, level }`
+  - `getPlayerStats(gold)` - Returns `{ health: 20 + level×8, attack: 10 + level×5, level }`
   - `refreshAllPlayerStats()`, `transferPlayer()` - Recalculates all player stats, scales health proportionally
 - **Military Rank Tiers** (based on level, determines icon):
   - Recruit (Lv 1-3), Private (Lv 4-6), Sergeant (Lv 7-10), Captain (Lv 11-15)
@@ -240,6 +240,7 @@ Object movement system:
 - `getMovableAtHex()` - Find any movable object at hex
 - `selectObjectToMove()` - Mark object for moving
 - `executeMove()` - Move object preserving all state (health, passengers, rotation)
+- **Team Land Movement:** Connected team land costs 0 movement; non-team hexes cost 1. Uses 0-1 BFS pathfinding via `computeReachable()`.
 - **Special handlers:**
   - `moveCastle()` - Moves center and all 18 territory hexes together
   - `moveTown()` - Moves center and all 6 territory hexes together
@@ -533,18 +534,18 @@ Gold acts as XP with a triangular scaling curve. Each level requires more gold t
 
 ### Combat Stats per Level
 
-- **Health** = 10 + (level × 5)
-- **Attack** = 5 + (level × 3)
+- **Health** = 20 + (level × 8)
+- **Attack** = 10 + (level × 5)
 
 | Level | HP | ATK |
 |-------|----|-----|
-| 1 | 15 | 8 |
-| 5 | 35 | 20 |
-| 10 | 60 | 35 |
-| 15 | 85 | 50 |
-| 20 | 110 | 65 |
-| 30 | 160 | 95 |
-| 50 | 260 | 155 |
+| 1 | 28 | 15 |
+| 5 | 60 | 35 |
+| 10 | 100 | 60 |
+| 15 | 140 | 85 |
+| 20 | 180 | 110 |
+| 30 | 260 | 160 |
+| 50 | 420 | 260 |
 
 ## Military Rank System
 
@@ -583,16 +584,16 @@ Where:
 
 | Object | HP | ATK | Cost | Move | Range | Icon Size |
 |--------|-----|-----|------|------|-------|-----------|
-| Army | 20 | 10 | 200g | 2 | 1 | Small (38px) |
-| Catapult | 10 | 50 | 200g | 3 | 3 | Small (38px) |
-| Ship | 500 | 200 | 100g | 15 | 2 | Small (38px) |
-| Wagon | 100 | 0 | 150g | 7 | 0 | Medium (48px) |
-| Fleet | 1000 | 300 | 400g | 10 | 2 | Medium (48px) |
+| Army | 60 | 15 | 50g | 2 | 1 | Small (38px) |
+| Catapult | 30 | 50 | 150g | 3 | 3 | Small (38px) |
+| Ship | 50 | 30 | 75g | 15 | 2 | Small (38px) |
+| Wagon | 80 | 0 | 50g | 7 | 0 | Medium (48px) |
+| Fleet | 100 | 50 | 250g | 10 | 2 | Medium (48px) |
 | Mineral | 100 | 0 | — | 0 | 0 | Medium (48px) |
-| Bridge | 100 | 0 | 50g | 0 | 0 | Medium (48px) |
-| Wall | 100 | 0 | 100g | 0 | 0 | — (edge) |
-| Town | 200 | 0 | 1,000g | 0 | 0 | Large (64px) |
-| Castle | 500 | 0 | 5,000g | 0 | 0 | XLarge (100px) |
+| Bridge | 80 | 0 | 25g | 0 | 0 | Medium (48px) |
+| Wall | 150 | 0 | 50g | 0 | 0 | — (edge) |
+| Town | 300 | 0 | 500g | 0 | 0 | Large (64px) |
+| Castle | 500 | 0 | 2,500g | 0 | 0 | XLarge (100px) |
 | Land | — | — | 10g/hex | — | — | — |
 
 ### Player Movement Speed
@@ -620,7 +621,7 @@ Base speed 1 + 1 per every 2 rank tiers (max 5 at Conqueror/Overlord).
 - **Mineral Destruction**: Attacking team gains 500g (team bonus, not individual)
 - **Player Death**: Player marked as dead (not removed), can revive at own town/castle
 - **Object Removal**: Cmd+click to remove objects (prevents accidental deletion)
-- **Move Range**: Visual hex highlight shows reachable hexes; out-of-range moves blocked
+- **Move Range**: Visual hex highlight shows reachable hexes; out-of-range moves blocked. Movement through connected team land is free (0 cost); non-team hexes cost 1 movement.
 - **Attack Range**: Visual red hex highlight shows attackable hexes; out-of-range attacks blocked
 
 ### Revive Cost

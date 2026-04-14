@@ -53,12 +53,12 @@ function getPlayerMoveSpeed(gold) {
 }
 
 // Get player combat stats based on gold (level-scaled)
-// Health = 10 + (level × 5), Attack = 5 + (level × 3)
+// Health = 20 + (level × 8), Attack = 10 + (level × 5)
 function getPlayerStats(gold) {
   const level = getPlayerLevel(gold);
   return {
-    health: 10 + (level * 5),
-    attack: 5 + (level * 3),
+    health: 20 + (level * 8),
+    attack: 10 + (level * 5),
     level: level
   };
 }

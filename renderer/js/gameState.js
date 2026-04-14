@@ -4,15 +4,15 @@
 
 // Object health values (tuned for faster gameplay)
 const OBJECT_HEALTH = {
-  army: 20,
-  ship: 500,
-  bridge: 100,
-  wall: 100,
-  catapult: 10,
+  army: 60,
+  ship: 50,
+  bridge: 80,
+  wall: 150,
+  catapult: 30,
   mineral: 100,
-  wagon: 100,
-  fleet: 1000,
-  town: 200,
+  wagon: 80,
+  fleet: 100,
+  town: 300,
   castle: 500
 };
 
@@ -23,15 +23,15 @@ const LAND_COST = 10;
 const MINERAL_REWARD = 500;
 
 const OBJECT_COSTS = {
-  wall: 100,
-  bridge: 50,
-  ship: 100,
-  army: 200,
-  catapult: 200,
-  wagon: 150,
-  fleet: 400,
-  town: 1000,
-  castle: 5000
+  wall: 50,
+  bridge: 25,
+  ship: 75,
+  army: 50,
+  catapult: 150,
+  wagon: 50,
+  fleet: 250,
+  town: 500,
+  castle: 2500
 };
 
 // Movement speeds (hexes per move, 0 = immovable)

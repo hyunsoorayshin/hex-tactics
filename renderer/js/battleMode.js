@@ -130,7 +130,7 @@ function getAttackerAtHex(hexKey) {
       teamId: obj.teamId,
       data: obj,
       name: 'Army',
-      attack: 10,
+      attack: 15,
       range: ATTACK_RANGE.army
     };
   }
@@ -154,7 +154,7 @@ function getAttackerAtHex(hexKey) {
       teamId: obj.teamId,
       data: obj,
       name: obj.passenger ? `Ship (${obj.passenger.name})` : 'Ship',
-      attack: 200,
+      attack: 30,
       range: ATTACK_RANGE.ship
     };
   }
@@ -168,7 +168,7 @@ function getAttackerAtHex(hexKey) {
       teamId: obj.teamId,
       data: obj,
       name: `Fleet${names}`,
-      attack: 300,
+      attack: 50,
       range: ATTACK_RANGE.fleet
     };
   }

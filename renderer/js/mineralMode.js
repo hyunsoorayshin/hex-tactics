@@ -117,7 +117,7 @@ function addMineralMarker(hexKey) {
     const metaKey = e.metaKey || e.ctrlKey;
 
     if (isLandMode()) {
-      onLandClick(hexKey, null);
+      onLandClick(hexKey, document.querySelector(`.hex[data-hex="${hexKey}"]`));
       return;
     }
     if (isBattleMode()) {

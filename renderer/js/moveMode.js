@@ -28,6 +28,7 @@ function toggleMoveMode() {
 
 function clearMoveSelection() {
   selectedMoveObject = null;
+  cachedReachable = null;
   movePhase = moveMode ? 'select_object' : null;
   updateMoveHint();
   clearMoveRange();
@@ -69,7 +70,10 @@ function updateMoveHint() {
   if (movePhase === 'select_destination') {
     const name = selectedMoveObject?.type || 'object';
     const speed = selectedMoveObject?.speed || 0;
-    hint.textContent = `Click destination to move ${name} (range: ${speed} hexes)`;
+    const isNaval = name === 'ship' || name === 'fleet';
+    hint.textContent = isNaval
+      ? `Click destination to move ${name} (range: ${speed} hexes)`
+      : `Click destination to move ${name} (range: ${speed} + free on team land)`;
     hint.classList.add('interaction');
   } else {
     hint.textContent = 'Click an object or player to move';
@@ -80,6 +84,80 @@ function updateMoveHint() {
 // ============================================
 // Move Logic
 // ============================================
+
+// BFS pathfinding: team land = 0 cost, non-team land = 1 cost
+// Returns a Map of hexKey -> cost for all reachable hexes within budget
+function computeReachable(fromHexKey, speed, teamId) {
+  const costs = new Map(); // hexKey -> minimum cost to reach
+  costs.set(fromHexKey, 0);
+
+  // Priority queue (simple sorted array since costs are 0 or 1)
+  // Use deque-style BFS: cost-0 neighbors go to front, cost-1 go to back
+  const queue = [{ hexKey: fromHexKey, cost: 0 }];
+
+  while (queue.length > 0) {
+    const { hexKey, cost } = queue.shift();
+
+    // Skip if we already found a cheaper path
+    if (cost > (costs.get(hexKey) ?? Infinity)) continue;
+
+    const [q, r] = hexKey.split(',').map(Number);
+
+    for (const dir of [
+      { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+      { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
+    ]) {
+      const nKey = `${q + dir.q},${r + dir.r}`;
+      const isTeamLand = GameState.land[nKey] === teamId;
+      const stepCost = isTeamLand ? 0 : 1;
+      const newCost = cost + stepCost;
+
+      if (newCost > speed) continue;
+      if (newCost >= (costs.get(nKey) ?? Infinity)) continue;
+
+      costs.set(nKey, newCost);
+      // 0-cost neighbors go to front (deque optimization for 0-1 BFS)
+      if (stepCost === 0) {
+        queue.unshift({ hexKey: nKey, cost: newCost });
+      } else {
+        queue.push({ hexKey: nKey, cost: newCost });
+      }
+    }
+  }
+
+  costs.delete(fromHexKey);
+  return costs;
+}
+
+// Simple distance-based reachable (no team land bonus) for naval units
+function computeReachableSimple(fromHexKey, speed) {
+  const costs = new Map();
+  costs.set(fromHexKey, 0);
+  const queue = [{ hexKey: fromHexKey, cost: 0 }];
+
+  while (queue.length > 0) {
+    const { hexKey, cost } = queue.shift();
+    if (cost > (costs.get(hexKey) ?? Infinity)) continue;
+    const [q, r] = hexKey.split(',').map(Number);
+    for (const dir of [
+      { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+      { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
+    ]) {
+      const nKey = `${q + dir.q},${r + dir.r}`;
+      const newCost = cost + 1;
+      if (newCost > speed) continue;
+      if (newCost >= (costs.get(nKey) ?? Infinity)) continue;
+      costs.set(nKey, newCost);
+      queue.push({ hexKey: nKey, cost: newCost });
+    }
+  }
+
+  costs.delete(fromHexKey);
+  return costs;
+}
+
+// Cache for current selection's reachable hexes
+let cachedReachable = null;
 
 function onMoveModeHexClick(hexKey, element, shiftKey) {
   if (movePhase === 'select_destination') {
@@ -140,9 +218,19 @@ function getMovableAtHex(hexKey) {
 function selectObjectToMove(hexKey, movable) {
   selectedMoveObject = movable;
   movePhase = 'select_destination';
+
+  // Naval units use flat distance; land units get free movement on team land
+  const isNaval = movable.type === 'ship' || movable.type === 'fleet';
+  if (isNaval) {
+    cachedReachable = computeReachableSimple(hexKey, movable.speed);
+  } else {
+    const teamId = movable.isPlayer ? movable.teamId : movable.data?.teamId;
+    cachedReachable = computeReachable(hexKey, movable.speed, teamId);
+  }
+
   updateMoveHint();
   highlightSelectedObject(hexKey);
-  showMoveRange(hexKey, movable.speed);
+  showMoveRange(cachedReachable);
   showNotification(`Selected ${movable.type} to move (range: ${movable.speed} hexes)`);
 }
 
@@ -156,10 +244,9 @@ function executeMove(destinationHexKey) {
     return;
   }
 
-  // Check movement range
-  const distance = hexDistance(selectedMoveObject.hexKey, destinationHexKey);
-  if (distance > selectedMoveObject.speed) {
-    showNotification(`Out of range! (${distance} hexes, max ${selectedMoveObject.speed})`, 'error');
+  // Check movement range using pathfinding (team land is free)
+  if (!cachedReachable || !cachedReachable.has(destinationHexKey)) {
+    showNotification(`Out of range!`, 'error');
     clearMoveSelection();
     return;
   }
@@ -303,14 +390,12 @@ function highlightSelectedObject(hexKey) {
   });
 }
 
-function showMoveRange(fromHexKey, speed) {
+function showMoveRange(reachable) {
   clearMoveRange();
-  // Highlight all hex polygons within range
+  // Highlight all hex polygons that are reachable
   document.querySelectorAll('.hex[data-hex]').forEach(hexEl => {
     const hexKey = hexEl.getAttribute('data-hex');
-    if (hexKey === fromHexKey) return;
-    const dist = hexDistance(fromHexKey, hexKey);
-    if (dist <= speed) {
+    if (reachable.has(hexKey)) {
       hexEl.classList.add('move-in-range');
     }
   });

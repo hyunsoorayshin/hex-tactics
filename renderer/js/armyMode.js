@@ -138,7 +138,8 @@ function addArmyMarker(hexKey, teamId) {
 
     // Delegate to other modes if active
     if (isLandMode()) {
-      onLandClick(hexKey, null);
+      const hexEl = document.querySelector(`.hex[data-hex="${hexKey}"]`);
+      onLandClick(hexKey, hexEl);
       return;
     }
     if (isBattleMode()) {

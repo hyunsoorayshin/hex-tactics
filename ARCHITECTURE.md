@@ -240,7 +240,7 @@ Object movement system:
 - `getMovableAtHex()` - Find any movable object at hex
 - `selectObjectToMove()` - Mark object for moving
 - `executeMove()` - Move object preserving all state (health, passengers, rotation)
-- **Team Land Movement:** Connected team land costs 0 movement; non-team hexes cost 1. Uses 0-1 BFS pathfinding via `computeReachable()`.
+- **Team Land Movement:** Land units get free movement on connected team land (0 cost); non-team hexes cost 1. Uses 0-1 BFS pathfinding via `computeReachable()`. Naval units (ship, fleet) use flat distance only via `computeReachableSimple()`.
 - **Special handlers:**
   - `moveCastle()` - Moves center and all 18 territory hexes together
   - `moveTown()` - Moves center and all 6 territory hexes together
@@ -621,7 +621,7 @@ Base speed 1 + 1 per every 2 rank tiers (max 5 at Conqueror/Overlord).
 - **Mineral Destruction**: Attacking team gains 500g (team bonus, not individual)
 - **Player Death**: Player marked as dead (not removed), can revive at own town/castle
 - **Object Removal**: Cmd+click to remove objects (prevents accidental deletion)
-- **Move Range**: Visual hex highlight shows reachable hexes; out-of-range moves blocked. Movement through connected team land is free (0 cost); non-team hexes cost 1 movement.
+- **Move Range**: Visual hex highlight shows reachable hexes; out-of-range moves blocked. Land units get free movement on connected team land (0 cost); non-team hexes cost 1. Naval units (ship, fleet) use flat distance only.
 - **Attack Range**: Visual red hex highlight shows attackable hexes; out-of-range attacks blocked
 
 ### Revive Cost

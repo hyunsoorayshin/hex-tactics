@@ -311,7 +311,7 @@ function addTownMarker(hexKey, teamId, housed, isSelected) {
     const shiftKey = e.shiftKey;
 
     if (isLandMode()) {
-      onLandClick(hexKey, null);
+      onLandClick(hexKey, document.querySelector(`.hex[data-hex="${hexKey}"]`));
       return;
     }
 

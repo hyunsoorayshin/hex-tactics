@@ -4,9 +4,12 @@
 
 let townMode = false;
 
-// Housing interaction state
-let townHousingMode = null; // 'housing' | 'evicting' | null
+// Town interaction state
+let townInteractionMode = null; // 'boarding' | 'disembarking' | null
 let selectedTownHex = null;
+let selectedTownDisembarkIndex = null;
+
+const TOWN_CAPACITY = 3;
 
 function isTownMode() {
   return townMode;
@@ -18,7 +21,7 @@ function setTownMode(enabled) {
     showTownHint();
   } else {
     hideTownHint();
-    clearTownHousing();
+    clearTownInteraction();
   }
 }
 
@@ -27,13 +30,17 @@ function toggleTownMode() {
   return townMode;
 }
 
-function getTownHousingMode() {
-  return townHousingMode;
+function getTownInteractionMode() {
+  return townInteractionMode;
 }
 
-function clearTownHousing() {
-  townHousingMode = null;
+function clearTownInteraction() {
+  townInteractionMode = null;
   selectedTownHex = null;
+  selectedTownDisembarkIndex = null;
+  closeTownPassengerPanel();
+  updateTownHint();
+  renderTowns();
 }
 
 // ============================================
@@ -46,9 +53,9 @@ function showTownHint() {
     hint = document.createElement('div');
     hint.id = 'town-hint';
     hint.className = 'mode-hint';
-    hint.textContent = 'Click to place town (7 hexes required). Cmd+click to remove.';
     document.body.appendChild(hint);
   }
+  updateTownHint();
   hint.classList.add('visible');
 }
 
@@ -56,6 +63,22 @@ function hideTownHint() {
   const hint = document.getElementById('town-hint');
   if (hint) {
     hint.classList.remove('visible');
+  }
+}
+
+function updateTownHint() {
+  const hint = document.getElementById('town-hint');
+  if (!hint) return;
+
+  if (townInteractionMode === 'boarding') {
+    hint.textContent = 'Click a hex with a player to board into the town';
+    hint.classList.add('interaction');
+  } else if (townInteractionMode === 'disembarking') {
+    hint.textContent = 'Click a hex to place the passenger';
+    hint.classList.add('interaction');
+  } else {
+    hint.textContent = 'Click to place. Shift: board | Option: disembark | Cmd: remove';
+    hint.classList.remove('interaction');
   }
 }
 
@@ -88,19 +111,55 @@ function canPlaceTown(hexKey, teamId) {
   return { valid: true };
 }
 
-function onTownModeHexClick(hexKey, element, metaKey) {
+function onTownModeHexClick(hexKey, element, shiftKey, metaKey, altKey) {
+  if (townInteractionMode === 'boarding') {
+    handleTownBoarding(hexKey);
+    return;
+  }
+
+  if (townInteractionMode === 'disembarking') {
+    handleTownDisembarking(hexKey);
+    return;
+  }
+
   const currentTeam = getCurrentTeam();
 
   // Check if clicking on existing town
   const existingObj = GameState.hexObjects[hexKey];
   if (existingObj?.type === 'town' || existingObj?.type === 'town-territory') {
-    // Cmd+click to remove
-    if (metaKey) {
-      const centerHex = existingObj.type === 'town' ? hexKey : existingObj.centerHex;
-      removeTown(centerHex);
-      showNotification('Town removed');
+    const centerHex = existingObj.type === 'town' ? hexKey : existingObj.centerHex;
+    const town = GameState.hexObjects[centerHex];
+
+    if (shiftKey) {
+      const passengers = town.passengers || [];
+      if (passengers.length >= TOWN_CAPACITY) {
+        showNotification(`Town is full (${TOWN_CAPACITY}/${TOWN_CAPACITY})!`, 'error');
+      } else {
+        selectedTownHex = centerHex;
+        townInteractionMode = 'boarding';
+        showNotification(`Select a player to board (${passengers.length}/${TOWN_CAPACITY})`);
+        updateTownHint();
+        renderTowns();
+      }
+    } else if (altKey) {
+      const passengers = town.passengers || [];
+      if (passengers.length === 0) {
+        showNotification('No passengers to disembark', 'error');
+      } else {
+        selectedTownHex = centerHex;
+        showTownPassengerPanel(centerHex, passengers);
+        renderTowns();
+      }
+    } else if (metaKey) {
+      const passengers = town.passengers || [];
+      if (passengers.length > 0) {
+        showNotification('Disembark all passengers first!', 'error');
+      } else {
+        removeTown(centerHex);
+        showNotification('Town removed');
+      }
     } else {
-      showNotification('Cmd+click to remove town', 'error');
+      showNotification('Shift: board | Option: disembark | Cmd: remove', 'error');
     }
     return;
   }
@@ -116,13 +175,116 @@ function onTownModeHexClick(hexKey, element, metaKey) {
   showNotification('Town placed!');
 }
 
+// ============================================
+// Town Boarding / Disembarking
+// ============================================
+
+function handleTownBoarding(hexKey) {
+  const town = GameState.hexObjects[selectedTownHex];
+  if (!town || town.type !== 'town') {
+    showNotification('Town not found', 'error');
+    clearTownInteraction();
+    return;
+  }
+
+  if (!town.passengers) town.passengers = [];
+
+  if (town.passengers.length >= TOWN_CAPACITY) {
+    showNotification(`Town is full (${TOWN_CAPACITY}/${TOWN_CAPACITY})!`, 'error');
+    clearTownInteraction();
+    return;
+  }
+
+  // Check for player at hex (town only accepts players, not armies)
+  const playersAtHex = GameState.getPlayersAtHex(hexKey);
+  if (playersAtHex.length > 0) {
+    const { teamId, playerId, player } = playersAtHex[0];
+    town.passengers.push({
+      kind: 'player',
+      teamId: teamId,
+      playerId: playerId,
+      name: player.name
+    });
+
+    // Remove player from their hex position
+    GameState.setPlayerPosition(teamId, playerId, null);
+
+    // Heal player to full health
+    const stats = getPlayerStats(getEffectiveGold(player));
+    player.health = stats.health;
+    player.maxHealth = stats.health;
+
+    // Revive dead players
+    if (player.isDead) {
+      player.isDead = false;
+      player.revives = (player.revives || 0) + 1;
+      const team = GameState.teams[teamId];
+      if (team) {
+        team.reviveCount = (team.reviveCount || 0) + 1;
+      }
+      showNotification(`${player.name} revived and boarded the town! (-${REVIVE_COST}g, ${town.passengers.length}/${TOWN_CAPACITY})`);
+    } else {
+      showNotification(`${player.name} boarded the town (healed to full)! (${town.passengers.length}/${TOWN_CAPACITY})`);
+    }
+
+    if (town.passengers.length < TOWN_CAPACITY) {
+      updateTownHint();
+    } else {
+      clearTownInteraction();
+    }
+
+    renderTowns();
+    renderPlayerMarkers();
+    renderAllHealthBars();
+    return;
+  }
+
+  showNotification('No player at this hex', 'error');
+}
+
+function handleTownDisembarking(hexKey) {
+  const town = GameState.hexObjects[selectedTownHex];
+  if (!town || town.type !== 'town' || !town.passengers || town.passengers.length === 0) {
+    showNotification('No passengers to disembark', 'error');
+    clearTownInteraction();
+    return;
+  }
+
+  if (selectedTownDisembarkIndex === null) {
+    showNotification('Select a passenger from the panel first', 'error');
+    return;
+  }
+
+  const passenger = town.passengers.splice(selectedTownDisembarkIndex, 1)[0];
+
+  GameState.setPlayerPosition(passenger.teamId, passenger.playerId, hexKey);
+  showNotification(`${passenger.name} disembarked!`);
+
+  clearTownInteraction();
+
+  renderTowns();
+  renderPlayerMarkers();
+  renderAllHealthBars();
+}
+
+function evictFromTown(hexKey) {
+  const town = GameState.hexObjects[hexKey];
+  if (!town?.passengers || town.passengers.length === 0) return;
+
+  for (const passenger of town.passengers) {
+    GameState.setPlayerPosition(passenger.teamId, passenger.playerId, null);
+  }
+  town.passengers = [];
+}
+
 function placeTown(hexKey, teamId) {
   // Store town in game state (center hex)
   GameState.hexObjects[hexKey] = {
     type: 'town',
     teamId: teamId,
     health: OBJECT_HEALTH.town,
-    maxHealth: OBJECT_HEALTH.town
+    maxHealth: OBJECT_HEALTH.town,
+    passengers: []
   };
 
   // Mark all 6 neighbor hexes as town territory
@@ -148,10 +310,8 @@ function removeTown(hexKey) {
 
   // If this is the center, remove the town and all territory
   if (obj.type === 'town') {
-    // Evict any housed player first
-    if (obj.housed) {
-      evictFromTown(hexKey);
-    }
+    // Evict all passengers first
+    evictFromTown(hexKey);
     const hexes = getHexAndNeighbors(hexKey);
     for (const hex of hexes) {
       delete GameState.hexObjects[hex.toString()];
@@ -167,101 +327,61 @@ function removeTown(hexKey) {
 }
 
 // ============================================
-// Town Housing System
+// Town Passenger Selection Panel
 // ============================================
 
-function enterTownHousing(hexKey, town) {
-  selectedTownHex = hexKey;
+function showTownPassengerPanel(hexKey, passengers) {
+  closeTownPassengerPanel();
 
-  if (town.housed) {
-    // Town has resident - enter evicting mode
-    townHousingMode = 'evicting';
-    showNotification(`Click a hex to move ${town.housed.name} out`);
-  } else {
-    // Town is empty - enter housing mode
-    townHousingMode = 'housing';
-    showNotification('Click a player to house them');
-  }
+  const panel = document.createElement('div');
+  panel.id = 'town-passenger-panel';
+  panel.className = 'fleet-passenger-panel';
 
-  renderTowns();
+  const title = document.createElement('div');
+  title.className = 'fleet-passenger-title';
+  title.textContent = `Disembark (${passengers.length} aboard)`;
+  panel.appendChild(title);
+
+  const list = document.createElement('div');
+  list.className = 'fleet-passenger-list';
+
+  passengers.forEach((p, index) => {
+    const item = document.createElement('button');
+    item.className = 'fleet-passenger-item';
+
+    const icon = '\u2694';
+    const label = p.name;
+    item.textContent = `${icon} ${label}`;
+
+    item.addEventListener('click', () => {
+      selectedTownDisembarkIndex = index;
+      selectedTownHex = hexKey;
+      townInteractionMode = 'disembarking';
+      closeTownPassengerPanel();
+      showNotification(`Click a hex to place ${label}`);
+      updateTownHint();
+      renderTowns();
+    });
+
+    list.appendChild(item);
+  });
+
+  panel.appendChild(list);
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'fleet-passenger-cancel';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', () => {
+    clearTownInteraction();
+  });
+  panel.appendChild(cancelBtn);
+
+  document.body.appendChild(panel);
 }
 
-function handleTownHousing(hexKey) {
-  // Check if there's a player at this hex
-  const playersAtHex = GameState.getPlayersAtHex(hexKey);
-
-  if (playersAtHex.length === 0) {
-    showNotification('No player at this hex', 'error');
-    return;
-  }
-
-  const { teamId, playerId, player } = playersAtHex[0];
-  const town = GameState.hexObjects[selectedTownHex];
-
-  if (!town || town.type !== 'town') {
-    showNotification('Town not found', 'error');
-    clearTownHousing();
-    return;
-  }
-
-  // House the player in the town
-  town.housed = {
-    teamId: teamId,
-    playerId: playerId,
-    name: player.name
-  };
-
-  // Remove player from their hex position
-  GameState.setPlayerPosition(teamId, playerId, null);
-
-  // Heal player to full health
-  const stats = getPlayerStats(getEffectiveGold(player));
-  player.health = stats.health;
-  player.maxHealth = stats.health;
-
-  showNotification(`${player.name} is now housed in town (healed to full)!`);
-  clearTownHousing();
-
-  // Re-render
-  renderTowns();
-  renderPlayerMarkers();
-  renderAllHealthBars();
-}
-
-function handleTownEvicting(hexKey) {
-  const town = GameState.hexObjects[selectedTownHex];
-
-  if (!town || town.type !== 'town' || !town.housed) {
-    showNotification('No resident to evict', 'error');
-    clearTownHousing();
-    return;
-  }
-
-  const { teamId, playerId, name } = town.housed;
-
-  // Set player position to the clicked hex
-  GameState.setPlayerPosition(teamId, playerId, hexKey);
-
-  // Clear housed player from town
-  delete town.housed;
-
-  showNotification(`${name} left the town`);
-  clearTownHousing();
-
-  // Re-render
-  renderTowns();
-  renderPlayerMarkers();
-  renderAllHealthBars();
-}
-
-function evictFromTown(hexKey) {
-  const town = GameState.hexObjects[hexKey];
-  if (!town?.housed) return;
-
-  const { teamId, playerId } = town.housed;
-  // Player loses their position (will need to be placed again)
-  GameState.setPlayerPosition(teamId, playerId, null);
-  delete town.housed;
+function closeTownPassengerPanel() {
+  const panel = document.getElementById('town-passenger-panel');
+  if (panel) panel.remove();
 }
 
 // ============================================
@@ -277,12 +397,12 @@ function renderTowns() {
   for (const [hexKey, obj] of Object.entries(GameState.hexObjects)) {
     if (obj.type === 'town') {
       const isSelected = hexKey === selectedTownHex;
-      addTownMarker(hexKey, obj.teamId, obj.housed, isSelected);
+      addTownMarker(hexKey, obj.teamId, obj.passengers || [], isSelected);
     }
   }
 }
 
-function addTownMarker(hexKey, teamId, housed, isSelected) {
+function addTownMarker(hexKey, teamId, passengers, isSelected) {
   const hexEl = document.querySelector(`[data-hex="${hexKey}"]`);
   if (!hexEl) return;
 
@@ -308,60 +428,37 @@ function addTownMarker(hexKey, teamId, housed, isSelected) {
   marker.addEventListener('click', (e) => {
     e.stopPropagation();
     const metaKey = e.metaKey || e.ctrlKey;
-    const shiftKey = e.shiftKey;
 
     if (isLandMode()) {
       onLandClick(hexKey, document.querySelector(`.hex[data-hex="${hexKey}"]`));
       return;
     }
-
-    // Handle housing mode clicks
-    if (townHousingMode === 'housing') {
-      handleTownHousing(hexKey);
+    if (townInteractionMode === 'boarding') {
+      handleTownBoarding(hexKey);
       return;
     }
-    if (townHousingMode === 'evicting') {
-      handleTownEvicting(hexKey);
+    if (townInteractionMode === 'disembarking') {
+      handleTownDisembarking(hexKey);
       return;
     }
-
-    // Delegate to other modes if active
     if (isBattleMode()) {
-      onBattleModeHexClick(hexKey, null, shiftKey);
+      onBattleModeHexClick(hexKey, null, e.shiftKey);
       return;
     }
     if (isMoveMode()) {
-      onMoveModeHexClick(hexKey, null, shiftKey);
+      onMoveModeHexClick(hexKey, null, e.shiftKey);
       return;
     }
     if (isCastleMode()) {
-      // Delegate to castle mode for upgrade
-      onCastleModeHexClick(hexKey, null, metaKey);
+      onCastleModeHexClick(hexKey, null, e.shiftKey, metaKey, e.altKey);
       return;
     }
     if (isPlayerMode()) {
-      // Delegate to player mode for revival at town
       onPlayerModeHexClick(hexKey, null);
       return;
     }
-
-    // Shift+click to house/evict player (works in any mode or no mode)
-    if (shiftKey) {
-      const town = GameState.hexObjects[hexKey];
-      if (town) {
-        enterTownHousing(hexKey, town);
-      }
-      return;
-    }
-
-    // Town mode: Cmd+click to remove
     if (isTownMode()) {
-      if (metaKey) {
-        removeTown(hexKey);
-        showNotification('Town removed');
-      } else {
-        showNotification('Shift+click to house player. Cmd+click to remove.', 'error');
-      }
+      onTownModeHexClick(hexKey, null, e.shiftKey, metaKey, e.altKey);
     }
   });
 
@@ -426,13 +523,41 @@ function addTownMarker(hexKey, teamId, housed, isSelected) {
 
   marker.appendChild(icon);
 
-  // Add housed player name label if town has a resident
-  if (housed) {
-    const housedTeam = GameState.teams[housed.teamId];
-    const housedColor = housedTeam?.border || '#ffffff';
+  // Passenger count badge (bottom-right)
+  const count = passengers.length;
+  if (count > 0) {
+    const badgeX = centerX + iconSize / 2 - 6;
+    const badgeY = centerY + iconSize / 2 + 2;
 
-    // Name background for readability
-    const nameWidth = housed.name.length * 7 + 8;
+    const badgeBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    badgeBg.setAttribute('x', badgeX - 6);
+    badgeBg.setAttribute('y', badgeY - 10);
+    badgeBg.setAttribute('width', 16);
+    badgeBg.setAttribute('height', 14);
+    badgeBg.setAttribute('rx', 3);
+    badgeBg.setAttribute('fill', 'rgba(0, 0, 0, 0.85)');
+    badgeBg.setAttribute('stroke', teamColor);
+    badgeBg.setAttribute('stroke-width', 1);
+
+    const badgeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    badgeText.setAttribute('x', badgeX + 2);
+    badgeText.setAttribute('y', badgeY);
+    badgeText.setAttribute('text-anchor', 'middle');
+    badgeText.setAttribute('fill', '#fff');
+    badgeText.setAttribute('font-size', '10');
+    badgeText.setAttribute('font-weight', 'bold');
+    badgeText.textContent = count;
+
+    marker.appendChild(badgeBg);
+    marker.appendChild(badgeText);
+  }
+
+  // Passenger names label
+  if (count > 0) {
+    const names = passengers.map(p => p.name).join(', ');
+    const displayText = names.length > 30 ? names.substring(0, 27) + '...' : names;
+    const nameWidth = displayText.length * 6 + 8;
+
     const nameBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     nameBg.setAttribute('x', centerX - nameWidth / 2);
     nameBg.setAttribute('y', centerY - iconSize / 2 - 20);
@@ -440,19 +565,17 @@ function addTownMarker(hexKey, teamId, housed, isSelected) {
     nameBg.setAttribute('height', 14);
     nameBg.setAttribute('rx', 3);
     nameBg.setAttribute('fill', 'rgba(0, 0, 0, 0.8)');
-    nameBg.setAttribute('stroke', housedColor);
+    nameBg.setAttribute('stroke', teamColor);
     nameBg.setAttribute('stroke-width', 1);
 
-    // Housed player name text
     const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     nameText.setAttribute('x', centerX);
     nameText.setAttribute('y', centerY - iconSize / 2 - 8);
     nameText.setAttribute('text-anchor', 'middle');
     nameText.setAttribute('fill', '#fff');
-    nameText.setAttribute('font-size', '11');
-    nameText.setAttribute('font-weight', 'bold');
-    nameText.classList.add('town-housed-name');
-    nameText.textContent = housed.name;
+    nameText.setAttribute('font-size', '10');
+    nameText.classList.add('town-passenger-names');
+    nameText.textContent = displayText;
 
     marker.appendChild(nameBg);
     marker.appendChild(nameText);

@@ -53,12 +53,13 @@ function getPlayerMoveSpeed(gold) {
 }
 
 // Get player combat stats based on gold (level-scaled)
-// Health = 20 + (level × 8), Attack = 10 + (level × 5)
+// Health = 20 + (level × 8), Attack = 10 + (level × 5), Defense = 5 + (level × 3)
 function getPlayerStats(gold) {
   const level = getPlayerLevel(gold);
   return {
     health: 20 + (level * 8),
     attack: 10 + (level * 5),
+    defense: 5 + (level * 3),
     level: level
   };
 }
@@ -219,23 +220,45 @@ function onPlayerModeHexClick(hexKey, element) {
       return;
     }
 
-    // Revive the player
+    // Check capacity
+    const capacity = isOwnCastle ? CASTLE_CAPACITY : TOWN_CAPACITY;
+    const passengers = hexObj.passengers || [];
+    if (passengers.length >= capacity) {
+      showNotification(`${hexObj.type} is full (${capacity}/${capacity})!`, 'error');
+      return;
+    }
+
+    // Board the dead player into the building (heals + revives)
+    if (!hexObj.passengers) hexObj.passengers = [];
+    hexObj.passengers.push({
+      kind: 'player',
+      teamId: currentTeam,
+      playerId: selectedPlayerId,
+      name: player.name
+    });
+
+    // Heal and revive
     const stats = getPlayerStats(getEffectiveGold(player));
     player.health = stats.health;
     player.maxHealth = stats.health;
     player.isDead = false;
-    player.position = hexKey;
-    player.revives = (player.revives || 0) + 1;  // Track player revive count
+    player.position = null;
+    player.revives = (player.revives || 0) + 1;
 
-    // Track team revive cost
     const team = GameState.teams[currentTeam];
     if (team) {
       team.reviveCount = (team.reviveCount || 0) + 1;
     }
 
-    showNotification(`${player.name} revived at ${hexObj.type}! (-${REVIVE_COST}g)`);
+    showNotification(`${player.name} revived and housed in ${hexObj.type}! (-${REVIVE_COST}g)`);
+    if (isOwnTown) renderTowns();
+    if (isOwnCastle) renderCastles();
   } else {
     // Normal placement for living players
+    if (isWaterHex(hexKey)) {
+      showNotification('Cannot place player on water', 'error');
+      return;
+    }
     GameState.setPlayerPosition(currentTeam, selectedPlayerId, hexKey);
     console.log(`Placed player ${selectedPlayerId} at ${hexKey}`);
   }

@@ -108,6 +108,7 @@ function computeReachable(fromHexKey, speed, teamId) {
       { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
     ]) {
       const nKey = `${q + dir.q},${r + dir.r}`;
+      if (isWaterHex(nKey)) continue; // Land units can't enter water
       const isTeamLand = GameState.land[nKey] === teamId;
       const stepCost = isTeamLand ? 0 : 1;
       const newCost = cost + stepCost;
@@ -129,7 +130,7 @@ function computeReachable(fromHexKey, speed, teamId) {
   return costs;
 }
 
-// Simple distance-based reachable (no team land bonus) for naval units
+// Simple distance-based reachable for naval units (water hexes only)
 function computeReachableSimple(fromHexKey, speed) {
   const costs = new Map();
   costs.set(fromHexKey, 0);
@@ -144,11 +145,45 @@ function computeReachableSimple(fromHexKey, speed) {
       { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
     ]) {
       const nKey = `${q + dir.q},${r + dir.r}`;
+      if (!isWaterHex(nKey)) continue; // Naval units can only move through water
       const newCost = cost + 1;
       if (newCost > speed) continue;
       if (newCost >= (costs.get(nKey) ?? Infinity)) continue;
       costs.set(nKey, newCost);
       queue.push({ hexKey: nKey, cost: newCost });
+    }
+  }
+
+  costs.delete(fromHexKey);
+  return costs;
+}
+
+// Aerial movement: flies over any terrain, team land = 0 cost
+function computeReachableAerial(fromHexKey, speed, teamId) {
+  const costs = new Map();
+  costs.set(fromHexKey, 0);
+  const queue = [{ hexKey: fromHexKey, cost: 0 }];
+
+  while (queue.length > 0) {
+    const { hexKey, cost } = queue.shift();
+    if (cost > (costs.get(hexKey) ?? Infinity)) continue;
+    const [q, r] = hexKey.split(',').map(Number);
+    for (const dir of [
+      { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+      { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
+    ]) {
+      const nKey = `${q + dir.q},${r + dir.r}`;
+      const isTeamLand = GameState.land[nKey] === teamId;
+      const stepCost = isTeamLand ? 0 : 1;
+      const newCost = cost + stepCost;
+      if (newCost > speed) continue;
+      if (newCost >= (costs.get(nKey) ?? Infinity)) continue;
+      costs.set(nKey, newCost);
+      if (stepCost === 0) {
+        queue.unshift({ hexKey: nKey, cost: newCost });
+      } else {
+        queue.push({ hexKey: nKey, cost: newCost });
+      }
     }
   }
 
@@ -182,14 +217,25 @@ function getMovableAtHex(hexKey) {
     if (hexObj.type === 'castle-territory' || hexObj.type === 'town-territory') {
       // Fall through to check for players on this hex
     } else {
-      const speed = MOVE_SPEED[hexObj.type];
+      // Army subtypes have their own speed
+      let speed;
+      let aerial = false;
+      if (hexObj.type === 'army') {
+        const armyStats = ARMY_TYPES[hexObj.subtype || 'infantry'];
+        speed = armyStats.move;
+        aerial = armyStats.aerial;
+      } else {
+        speed = MOVE_SPEED[hexObj.type];
+      }
       if (speed !== 0 && speed !== undefined) {
         return {
           type: hexObj.type,
+          subtype: hexObj.subtype,
           hexKey,
           isHexObject: true,
           data: hexObj,
-          speed: speed
+          speed: speed,
+          aerial: aerial
         };
       }
       // Immovable object — fall through to check for players/armies on same hex
@@ -219,10 +265,14 @@ function selectObjectToMove(hexKey, movable) {
   selectedMoveObject = movable;
   movePhase = 'select_destination';
 
-  // Naval units use flat distance; land units get free movement on team land
+  // Naval = water only, aerial = anywhere (flat distance), land = land only with team bonus
   const isNaval = movable.type === 'ship' || movable.type === 'fleet';
+  const isAerial = movable.aerial;
   if (isNaval) {
     cachedReachable = computeReachableSimple(hexKey, movable.speed);
+  } else if (isAerial) {
+    const teamId = movable.data?.teamId;
+    cachedReachable = computeReachableAerial(hexKey, movable.speed, teamId);
   } else {
     const teamId = movable.isPlayer ? movable.teamId : movable.data?.teamId;
     cachedReachable = computeReachable(hexKey, movable.speed, teamId);

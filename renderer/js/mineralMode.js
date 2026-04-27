@@ -60,6 +60,10 @@ function onMineralModeHexClick(hexKey, element, metaKey) {
       showNotification('Cmd+click to remove mineral', 'error');
     }
   } else {
+    if (isWaterHex(hexKey)) {
+      showNotification('Cannot place mineral on water', 'error');
+      return;
+    }
     placeMineral(hexKey);
     showNotification('Mineral placed!');
   }

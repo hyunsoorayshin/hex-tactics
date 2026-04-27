@@ -115,7 +115,7 @@ Player placement and level system:
 - **Level System:**
   - `getPlayerLevel(gold)` - Triangular XP curve (each level costs more gold)
   - `getGoldForLevel(level)` - Gold threshold: `level × (level-1) × 50`
-  - `getPlayerStats(gold)` - Returns `{ health: 20 + level×8, attack: 10 + level×5, level }`
+  - `getPlayerStats(gold)` - Returns `{ health: 20 + level×8, attack: 10 + level×5, defense: 5 + level×3, level }`
   - `refreshAllPlayerStats()`, `transferPlayer()` - Recalculates all player stats, scales health proportionally
 - **Military Rank Tiers** (based on level, determines icon):
   - Recruit (Lv 1-3), Private (Lv 4-6), Sergeant (Lv 7-10), Captain (Lv 11-15)
@@ -158,13 +158,19 @@ Bridge placement system:
 - Exports: `isBridgeMode()`, `setBridgeMode()`, `toggleBridgeMode()`, `renderBridges()`
 
 #### `armyMode.js`
-Army placement system:
-- Requires placement on team's owned land
-- `placeArmy()` / `removeArmy()` - Manage army state
-- `renderArmies()` - Draws army markers with team color outline
-- Uses SVG filter for team-colored border around icon
-- Health: 100 HP
-- Exports: `isArmyMode()`, `setArmyMode()`, `toggleArmyMode()`, `renderArmies()`
+Army placement system with 5 unit subtypes:
+- Requires placement on team's owned land (except aerial units can move over water)
+- Type selection panel appears on placement click
+- `ARMY_TYPES` - Stats for each subtype (hp, atk, def, move, range, cost, aerial, canHitAerial)
+- `placeArmy(hexKey, teamId, subtype)` / `removeArmy()` - Manage army state
+- `renderArmies()` - Draws army markers with subtype-specific icons and team color outline
+- **Unit Types:**
+  - Infantry — 60 HP, 15 ATK, 10 DEF, 2 move, range 1, 100g (ground)
+  - Archer — 30 HP, 25 ATK, 5 DEF, 2 move, range 3, 150g (ground, can hit aerial)
+  - Knight — 80 HP, 20 ATK, 20 DEF, 2 move, range 1, 200g (ground)
+  - Cavalry — 50 HP, 20 ATK, 8 DEF, 5 move, range 1, 200g (ground)
+  - Dragon Rider — 100 HP, 35 ATK, 15 DEF, 4 move, range 2, 500g (aerial, can hit aerial)
+- Exports: `isArmyMode()`, `setArmyMode()`, `toggleArmyMode()`, `renderArmies()`, `ARMY_TYPES`
 
 #### `townMode.js`
 Town placement system (territory-based):
@@ -433,10 +439,11 @@ Teacher updates CSV grades
 | N | Toggle mineral mode |
 | X | Toggle battle mode |
 | M | Toggle move mode |
+| H | Toggle terrain editor mode |
+| E | Export terrain data (in terrain mode) |
 | R | Refresh all player stats |
-| Shift + Click (ship/fleet/wagon) | Board passenger |
-| Option + Click (ship/fleet/wagon) | Disembark passenger |
-| Shift + Click (town/castle) | House/evict player |
+| Shift + Click (ship/fleet/wagon/town/castle) | Board passenger |
+| Option + Click (ship/fleet/wagon/town/castle) | Disembark passenger |
 | Cmd + Click | Remove object (in placement modes) |
 | Shift + 1-9, 0 | Select team 1-10 |
 | Tab | Toggle team panel |
@@ -448,13 +455,13 @@ GameState = {
   hexObjects: {
     "q,r": {
       type: "castle" | "town" | "army" | "ship" | "fleet" | "wagon" | "mineral" | "bridge" | "castle-territory" | "town-territory",
+      subtype: "infantry" | "archer" | "knight" | "cavalry" | "dragonrider",  // For army units
       teamId: number,
       health: number,      // Current health (objects only)
       maxHealth: number,   // Maximum health (objects only)
       centerHex: "q,r",    // For territory hexes, reference to center
       passenger: { teamId, playerId, name },  // For ships with passengers
-      passengers: [{ kind, teamId, playerId, name }], // For fleets/wagons
-      housed: { teamId, playerId, name },     // For towns/castles with housed players
+      passengers: [{ kind, teamId, playerId, name }], // For fleets/wagons/towns/castles
       rotation: number     // For bridges (0, 60, 120 degrees)
     }
   },
@@ -536,16 +543,17 @@ Gold acts as XP with a triangular scaling curve. Each level requires more gold t
 
 - **Health** = 20 + (level × 8)
 - **Attack** = 10 + (level × 5)
+- **Defense** = 5 + (level × 3)
 
-| Level | HP | ATK |
-|-------|----|-----|
-| 1 | 28 | 15 |
-| 5 | 60 | 35 |
-| 10 | 100 | 60 |
-| 15 | 140 | 85 |
-| 20 | 180 | 110 |
-| 30 | 260 | 160 |
-| 50 | 420 | 260 |
+| Level | HP | ATK | DEF |
+|-------|----|-----|-----|
+| 1 | 28 | 15 | 8 |
+| 5 | 60 | 35 | 20 |
+| 10 | 100 | 60 | 35 |
+| 15 | 140 | 85 | 50 |
+| 20 | 180 | 110 | 65 |
+| 30 | 260 | 160 | 95 |
+| 50 | 420 | 260 | 155 |
 
 ## Military Rank System
 
@@ -580,21 +588,30 @@ Where:
 - **Lost Objects Cost** = Sum of costs for all destroyed objects
 - **Revive Costs** = reviveCount × 10g
 
-### Object Stats
+### Army Unit Stats
 
-| Object | HP | ATK | Cost | Move | Range | Icon Size |
-|--------|-----|-----|------|------|-------|-----------|
-| Army | 60 | 15 | 50g | 2 | 1 | Small (38px) |
-| Catapult | 30 | 50 | 150g | 3 | 3 | Small (38px) |
-| Ship | 50 | 30 | 75g | 15 | 2 | Small (38px) |
-| Wagon | 80 | 0 | 50g | 7 | 0 | Medium (48px) |
-| Fleet | 100 | 50 | 250g | 10 | 2 | Medium (48px) |
-| Mineral | 100 | 0 | — | 0 | 0 | Medium (48px) |
-| Bridge | 80 | 0 | 25g | 0 | 0 | Medium (48px) |
-| Wall | 150 | 0 | 50g | 0 | 0 | — (edge) |
-| Town | 300 | 0 | 500g | 0 | 0 | Large (64px) |
-| Castle | 500 | 0 | 2,500g | 0 | 0 | XLarge (100px) |
-| Land | — | — | 10g/hex | — | — | — |
+| Unit | HP | ATK | DEF | Move | Range | Cost | Type | Can Hit Aerial |
+|------|-----|-----|-----|------|-------|------|------|----------------|
+| Infantry | 60 | 15 | 10 | 2 | 1 | 100g | Ground | No |
+| Archer | 30 | 25 | 5 | 2 | 3 | 150g | Ground | Yes |
+| Knight | 80 | 20 | 20 | 2 | 1 | 200g | Ground | No |
+| Cavalry | 50 | 20 | 8 | 5 | 1 | 200g | Ground | No |
+| Dragon Rider | 100 | 35 | 15 | 4 | 2 | 500g | Aerial | Yes |
+
+### Other Object Stats
+
+| Object | HP | ATK | DEF | Cost | Move | Range | Icon Size |
+|--------|-----|-----|-----|------|------|-------|-----------|
+| Catapult | 30 | 50 | 0 | 150g | 2 | 3 | Small (38px) |
+| Ship | 50 | 30 | 15 | 75g | 15 | 2 | Small (38px) |
+| Wagon | 80 | 0 | 0 | 50g | 7 | 0 | Medium (48px) |
+| Fleet | 100 | 50 | 25 | 250g | 10 | 2 | Medium (48px) |
+| Mineral | 100 | 0 | 0 | — | 0 | 0 | Medium (48px) |
+| Bridge | 80 | 0 | 0 | 25g | 0 | 0 | Medium (48px) |
+| Wall | 150 | 0 | 0 | 50g | 0 | 0 | — (edge) |
+| Town | 300 | 0 | 0 | 500g | 0 | 0 | Large (64px) |
+| Castle | 500 | 0 | 0 | 2,500g | 0 | 0 | XLarge (100px) |
+| Land | — | — | — | 10g/hex | — | — | — |
 
 ### Player Movement Speed
 
@@ -611,9 +628,9 @@ Base speed 1 + 1 per every 2 rank tiers (max 5 at Conqueror/Overlord).
 
 ### Combat Rules
 
-- **One-way damage**: Only the target takes damage (no mutual combat)
-- **Attack Range**: Player/Army = 1 hex, Ship/Fleet = 2 hexes
-- **Ship/Fleet**: Attack directly with their own ATK value
+- **Defense Counter-Damage**: Attackers take damage equal to target's DEF when attacking players, armies, ships, or fleets
+- **Player Defense**: DEF = 5 + (level × 3)
+- **Attack Range**: Varies per unit type (see stats tables)
 - **Friendly Fire**: Allowed (can attack own team)
 - **Castle Destruction**: Only center hex removed, territory hexes remain
 - **Ship Destruction**: Passenger dies with the ship
@@ -621,7 +638,13 @@ Base speed 1 + 1 per every 2 rank tiers (max 5 at Conqueror/Overlord).
 - **Mineral Destruction**: Attacking team gains 500g (team bonus, not individual)
 - **Player Death**: Player marked as dead (not removed), can revive at own town/castle
 - **Object Removal**: Cmd+click to remove objects (prevents accidental deletion)
-- **Move Range**: Visual hex highlight shows reachable hexes; out-of-range moves blocked. Land units get free movement on connected team land (0 cost); non-team hexes cost 1. Naval units (ship, fleet) use flat distance only.
+- **Terrain Rules**:
+  - Ground units (infantry, knight, cavalry, players) — land hexes only
+  - Naval units (ship, fleet) — water hexes only, flat distance movement
+  - Aerial units (dragon rider) — any hex, free movement on team land
+  - Land ownership cannot be assigned to water hexes
+- **Aerial Combat**: Only archers, catapults, ships, and fleets can target aerial units. Dragon riders can attack anything.
+- **Move Range**: Visual hex highlight shows reachable hexes; out-of-range moves blocked
 - **Attack Range**: Visual red hex highlight shows attackable hexes; out-of-range attacks blocked
 
 ### Revive Cost

@@ -36,6 +36,7 @@ function clearWagonInteraction() {
   selectedWagonDisembarkIndex = null;
   closeWagonPassengerPanel();
   updateWagonHint();
+  renderWagons();
 }
 
 function getWagonInteractionMode() {
@@ -132,6 +133,10 @@ function onWagonModeHexClick(hexKey, element, shiftKey, metaKey, altKey) {
       showNotification('Shift: board | Option: disembark | Cmd: remove', 'error');
     }
   } else {
+    if (isWaterHex(hexKey)) {
+      showNotification('Cannot place wagon on water', 'error');
+      return;
+    }
     placeWagon(hexKey, currentTeam);
     showNotification('Wagon placed!');
   }

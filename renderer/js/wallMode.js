@@ -10,10 +10,13 @@ function isWallMode() {
 
 function setWallMode(enabled) {
   wallMode = enabled;
+  const svg = document.getElementById('hex-overlay');
   if (enabled) {
     showWallHint();
+    if (svg) svg.classList.add('wall-mode-active');
   } else {
     hideWallHint();
+    if (svg) svg.classList.remove('wall-mode-active');
   }
 }
 

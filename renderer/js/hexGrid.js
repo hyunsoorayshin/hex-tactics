@@ -62,6 +62,11 @@ function getHexCorners(hex) {
   return corners;
 }
 
+// Check if a hex is water
+function isWaterHex(hexKey) {
+  return WATER_HEXES.has(hexKey);
+}
+
 // Hex distance (axial coordinates) using cube distance formula
 function hexDistance(hexKeyA, hexKeyB) {
   const [aq, ar] = hexKeyA.split(',').map(Number);
@@ -189,33 +194,24 @@ function generateHexGrid() {
 function onHexClick(hex, element, shiftKey, metaKey, altKey) {
   const hexKey = hex.toString();
 
-  // Handle building housing mode clicks (takes priority over other modes)
-  if (getTownHousingMode() === 'housing') {
-    handleTownHousing(hexKey);
+  // Handle building interaction mode clicks (takes priority over other modes)
+  if (getBuildingInteractionMode() === 'boarding') {
+    handleBuildingBoarding(hexKey);
     return;
   }
-  if (getTownHousingMode() === 'evicting') {
-    handleTownEvicting(hexKey);
-    return;
-  }
-  if (getCastleHousingMode() === 'housing') {
-    handleCastleHousing(hexKey);
-    return;
-  }
-  if (getCastleHousingMode() === 'evicting') {
-    handleCastleEvicting(hexKey);
+  if (getBuildingInteractionMode() === 'disembarking') {
+    handleBuildingDisembarking(hexKey);
     return;
   }
 
-  if (isLandMode()) {
+  if (isTerrainMode()) {
+    onTerrainModeHexClick(hexKey, element);
+  } else if (isLandMode()) {
     // Delegate to land mode module
     onLandClick(hexKey, element);
   } else if (isPlayerMode()) {
     // Delegate to player mode module
     onPlayerModeHexClick(hexKey, element);
-  } else if (isCastleMode()) {
-    // Delegate to castle mode module
-    onCastleModeHexClick(hexKey, element, metaKey);
   } else if (isBridgeMode()) {
     // Delegate to bridge mode module
     onBridgeModeHexClick(hexKey, element, metaKey);
@@ -224,9 +220,9 @@ function onHexClick(hex, element, shiftKey, metaKey, altKey) {
     onArmyModeHexClick(hexKey, element, metaKey);
   } else if (isCatapultMode()) {
     onCatapultModeHexClick(hexKey, element, metaKey);
-  } else if (isTownMode()) {
-    // Delegate to town mode module
-    onTownModeHexClick(hexKey, element, metaKey);
+  } else if (isBuildingMode()) {
+    // Delegate to building mode module (town + castle)
+    onBuildingModeHexClick(hexKey, element, shiftKey, metaKey, altKey);
   } else if (isShipMode()) {
     // Delegate to ship mode module (pass shiftKey for boarding/disembarking)
     onShipModeHexClick(hexKey, element, shiftKey, metaKey, altKey);

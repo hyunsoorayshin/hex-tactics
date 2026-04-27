@@ -60,6 +60,10 @@ function onCatapultModeHexClick(hexKey, element, metaKey) {
       showNotification('Cmd+click to remove catapult', 'error');
     }
   } else {
+    if (isWaterHex(hexKey)) {
+      showNotification('Cannot place catapult on water', 'error');
+      return;
+    }
     if (GameState.land[hexKey] !== currentTeam) {
       showNotification('Must place catapult on your land', 'error');
       return;

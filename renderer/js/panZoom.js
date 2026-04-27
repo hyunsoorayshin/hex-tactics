@@ -11,7 +11,7 @@ let startY = 0;
 let spacePressed = false;
 
 const MIN_SCALE = 0.2;
-const MAX_SCALE = 3;
+const MAX_SCALE = 5;
 const ZOOM_SPEED = 0.1;
 
 // DOM references (set during init)

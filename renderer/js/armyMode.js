@@ -4,6 +4,15 @@
 
 let armyMode = false;
 
+// Army subtypes with stats
+const ARMY_TYPES = {
+  infantry:    { name: 'Infantry',      hp: 60,  atk: 15, def: 10, move: 2, range: 1, cost: 50,  aerial: false, canHitAerial: false },
+  archer:      { name: 'Archer',        hp: 30,  atk: 25, def: 5,  move: 2, range: 3, cost: 75,  aerial: false, canHitAerial: true },
+  knight:      { name: 'Knight',        hp: 80,  atk: 20, def: 20, move: 2, range: 1, cost: 100, aerial: false, canHitAerial: false },
+  cavalry:     { name: 'Cavalry',       hp: 50,  atk: 20, def: 8,  move: 5, range: 1, cost: 100, aerial: false, canHitAerial: false },
+  dragonrider: { name: 'Dragon Rider',  hp: 100, atk: 35, def: 15, move: 4, range: 2, cost: 200, aerial: true,  canHitAerial: true }
+};
+
 function isArmyMode() {
   return armyMode;
 }
@@ -14,6 +23,7 @@ function setArmyMode(enabled) {
     showArmyHint();
   } else {
     hideArmyHint();
+    closeArmyTypePanel();
   }
 }
 
@@ -46,6 +56,68 @@ function hideArmyHint() {
 }
 
 // ============================================
+// Army Type Selection Panel
+// ============================================
+
+let pendingArmyHex = null;
+let pendingArmyTeam = null;
+
+function showArmyTypePanel(hexKey, teamId) {
+  closeArmyTypePanel();
+  pendingArmyHex = hexKey;
+  pendingArmyTeam = teamId;
+
+  const panel = document.createElement('div');
+  panel.id = 'army-type-panel';
+  panel.className = 'fleet-passenger-panel';
+
+  const title = document.createElement('div');
+  title.className = 'fleet-passenger-title';
+  title.textContent = 'Select Unit Type';
+  panel.appendChild(title);
+
+  const list = document.createElement('div');
+  list.className = 'fleet-passenger-list';
+
+  for (const [subtype, stats] of Object.entries(ARMY_TYPES)) {
+    const item = document.createElement('button');
+    item.className = 'fleet-passenger-item';
+
+    const aerial = stats.aerial ? ' [Air]' : '';
+    item.textContent = `${stats.name}${aerial} — HP:${stats.hp} ATK:${stats.atk} DEF:${stats.def} RNG:${stats.range} SPD:${stats.move} (${stats.cost}g)`;
+
+    item.addEventListener('click', () => {
+      closeArmyTypePanel();
+      placeArmy(pendingArmyHex, pendingArmyTeam, subtype);
+      showNotification(`${stats.name} placed!`);
+      pendingArmyHex = null;
+      pendingArmyTeam = null;
+    });
+
+    list.appendChild(item);
+  }
+
+  panel.appendChild(list);
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'fleet-passenger-cancel';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', () => {
+    closeArmyTypePanel();
+    pendingArmyHex = null;
+    pendingArmyTeam = null;
+  });
+  panel.appendChild(cancelBtn);
+
+  document.body.appendChild(panel);
+}
+
+function closeArmyTypePanel() {
+  const panel = document.getElementById('army-type-panel');
+  if (panel) panel.remove();
+}
+
+// ============================================
 // Army Placement Logic
 // ============================================
 
@@ -62,26 +134,36 @@ function onArmyModeHexClick(hexKey, element, metaKey) {
       showNotification('Cmd+click to remove army', 'error');
     }
   } else {
-    // Check land ownership
+    // Check terrain
+    const obj = GameState.hexObjects[hexKey];
+    if (obj) {
+      showNotification('Hex is occupied', 'error');
+      return;
+    }
+    if (isWaterHex(hexKey)) {
+      showNotification('Cannot place army on water', 'error');
+      return;
+    }
     if (GameState.land[hexKey] !== currentTeam) {
       showNotification('Must place army on your land', 'error');
       return;
     }
-    // Place new army
-    placeArmy(hexKey, currentTeam);
-    showNotification('Army placed!');
+    // Show type selection
+    showArmyTypePanel(hexKey, currentTeam);
   }
 }
 
-function placeArmy(hexKey, teamId) {
+function placeArmy(hexKey, teamId, subtype) {
+  const stats = ARMY_TYPES[subtype];
   GameState.hexObjects[hexKey] = {
     type: 'army',
+    subtype: subtype,
     teamId: teamId,
-    health: OBJECT_HEALTH.army,
-    maxHealth: OBJECT_HEALTH.army
+    health: stats.hp,
+    maxHealth: stats.hp
   };
 
-  console.log(`Placed army for team ${teamId} at ${hexKey}`);
+  console.log(`Placed ${stats.name} for team ${teamId} at ${hexKey}`);
   renderArmies();
 }
 
@@ -104,12 +186,12 @@ function renderArmies() {
   // Find all armies
   for (const [hexKey, obj] of Object.entries(GameState.hexObjects)) {
     if (obj.type === 'army') {
-      addArmyMarker(hexKey, obj.teamId);
+      addArmyMarker(hexKey, obj.teamId, obj.subtype || 'infantry');
     }
   }
 }
 
-function addArmyMarker(hexKey, teamId) {
+function addArmyMarker(hexKey, teamId, subtype) {
   const hexEl = document.querySelector(`[data-hex="${hexKey}"]`);
   if (!hexEl) return;
 
@@ -219,13 +301,13 @@ function addArmyMarker(hexKey, teamId) {
   filter.appendChild(merge);
   defs.appendChild(filter);
 
-  // Army image (centered)
+  // Army image — use subtype-specific icon
   const icon = document.createElementNS('http://www.w3.org/2000/svg', 'image');
   icon.setAttribute('x', centerX - iconSize / 2);
   icon.setAttribute('y', centerY - iconSize / 2);
   icon.setAttribute('width', iconSize);
   icon.setAttribute('height', iconSize);
-  icon.setAttribute('href', `../assets/hex-objects/army.png`);
+  icon.setAttribute('href', `../assets/hex-objects/${subtype}.png`);
   icon.setAttribute('filter', `url(#${filterId})`);
   icon.classList.add('army-marker-icon');
 

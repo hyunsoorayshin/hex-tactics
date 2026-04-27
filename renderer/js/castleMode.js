@@ -4,9 +4,12 @@
 
 let castleMode = false;
 
-// Housing interaction state
-let castleHousingMode = null; // 'housing' | 'evicting' | null
+const CASTLE_CAPACITY = 5;
+
+// Interaction state
+let castleInteractionMode = null; // 'boarding' | 'disembarking' | null
 let selectedCastleHex = null;
+let selectedCastleDisembarkIndex = null;
 
 function isCastleMode() {
   return castleMode;
@@ -18,7 +21,7 @@ function setCastleMode(enabled) {
     showCastleHint();
   } else {
     hideCastleHint();
-    clearCastleHousing();
+    clearCastleInteraction();
   }
 }
 
@@ -27,13 +30,17 @@ function toggleCastleMode() {
   return castleMode;
 }
 
-function getCastleHousingMode() {
-  return castleHousingMode;
+function getCastleInteractionMode() {
+  return castleInteractionMode;
 }
 
-function clearCastleHousing() {
-  castleHousingMode = null;
+function clearCastleInteraction() {
+  castleInteractionMode = null;
   selectedCastleHex = null;
+  selectedCastleDisembarkIndex = null;
+  closeCastlePassengerPanel();
+  updateCastleHint();
+  renderCastles();
 }
 
 // ============================================
@@ -46,9 +53,9 @@ function showCastleHint() {
     hint = document.createElement('div');
     hint.id = 'castle-hint';
     hint.className = 'mode-hint';
-    hint.textContent = 'Click town to upgrade (19 hexes required). Cmd+click to remove.';
     document.body.appendChild(hint);
   }
+  updateCastleHint();
   hint.classList.add('visible');
 }
 
@@ -56,6 +63,22 @@ function hideCastleHint() {
   const hint = document.getElementById('castle-hint');
   if (hint) {
     hint.classList.remove('visible');
+  }
+}
+
+function updateCastleHint() {
+  const hint = document.getElementById('castle-hint');
+  if (!hint) return;
+
+  if (castleInteractionMode === 'boarding') {
+    hint.textContent = 'Click a hex with a player to board into the castle';
+    hint.classList.add('interaction');
+  } else if (castleInteractionMode === 'disembarking') {
+    hint.textContent = 'Click a hex to place the passenger';
+    hint.classList.add('interaction');
+  } else {
+    hint.textContent = 'Click town to upgrade. Shift: board | Option: disembark | Cmd: remove';
+    hint.classList.remove('interaction');
   }
 }
 
@@ -159,19 +182,59 @@ function canPlaceCastle(hexKey, teamId) {
   return { valid: true };
 }
 
-function onCastleModeHexClick(hexKey, element, metaKey) {
+function onCastleModeHexClick(hexKey, element, shiftKey, metaKey, altKey) {
+  // Handle active interaction modes first
+  if (castleInteractionMode === 'boarding') {
+    handleCastleBoarding(hexKey);
+    return;
+  }
+
+  if (castleInteractionMode === 'disembarking') {
+    handleCastleDisembarking(hexKey);
+    return;
+  }
+
   const currentTeam = getCurrentTeam();
 
   // Check if clicking on existing castle
   const existingObj = GameState.hexObjects[hexKey];
   if (existingObj?.type === 'castle' || existingObj?.type === 'castle-territory') {
-    // Cmd+click to remove
-    if (metaKey) {
-      const centerHex = existingObj.type === 'castle' ? hexKey : existingObj.centerHex;
-      removeCastle(centerHex);
-      showNotification('Castle removed');
+    const centerHex = existingObj.type === 'castle' ? hexKey : existingObj.centerHex;
+    const castle = GameState.hexObjects[centerHex];
+
+    if (shiftKey) {
+      // Shift+click to board
+      const passengers = castle.passengers || [];
+      if (passengers.length >= CASTLE_CAPACITY) {
+        showNotification(`Castle is full (${CASTLE_CAPACITY}/${CASTLE_CAPACITY})!`, 'error');
+      } else {
+        selectedCastleHex = centerHex;
+        castleInteractionMode = 'boarding';
+        showNotification(`Click a player to board (${passengers.length}/${CASTLE_CAPACITY})`);
+        updateCastleHint();
+        renderCastles();
+      }
+    } else if (altKey) {
+      // Option+click to disembark — show passenger picker
+      const passengers = castle.passengers || [];
+      if (passengers.length === 0) {
+        showNotification('No passengers to disembark', 'error');
+      } else {
+        selectedCastleHex = centerHex;
+        showCastlePassengerPanel(centerHex, passengers);
+        renderCastles();
+      }
+    } else if (metaKey) {
+      // Cmd+click to remove (only if empty)
+      const passengers = castle.passengers || [];
+      if (passengers.length > 0) {
+        showNotification('Disembark all passengers first!', 'error');
+      } else {
+        removeCastle(centerHex);
+        showNotification('Castle removed');
+      }
     } else {
-      showNotification('Cmd+click to remove castle', 'error');
+      showNotification('Shift: board | Option: disembark | Cmd: remove', 'error');
     }
     return;
   }
@@ -205,7 +268,8 @@ function placeCastle(hexKey, teamId) {
     type: 'castle',
     teamId: teamId,
     health: OBJECT_HEALTH.castle,
-    maxHealth: OBJECT_HEALTH.castle
+    maxHealth: OBJECT_HEALTH.castle,
+    passengers: []
   };
 
   // Mark inner ring (6 hexes) as castle territory
@@ -243,10 +307,9 @@ function removeCastle(hexKey) {
 
   // If this is the center, remove the castle and all territory
   if (obj.type === 'castle') {
-    // Evict any housed player first
-    if (obj.housed) {
-      evictFromCastle(hexKey);
-    }
+    // Evict all passengers first
+    evictFromCastle(hexKey);
+
     const { all } = getCastleHexes(hexKey);
     for (const hex of all) {
       delete GameState.hexObjects[hex.toString()];
@@ -262,49 +325,41 @@ function removeCastle(hexKey) {
 }
 
 // ============================================
-// Castle Housing System
+// Castle Boarding / Disembarking System
 // ============================================
 
-function enterCastleHousing(hexKey, castle) {
-  selectedCastleHex = hexKey;
-
-  if (castle.housed) {
-    // Castle has resident - enter evicting mode
-    castleHousingMode = 'evicting';
-    showNotification(`Click a hex to move ${castle.housed.name} out`);
-  } else {
-    // Castle is empty - enter housing mode
-    castleHousingMode = 'housing';
-    showNotification('Click a player to house them');
+function handleCastleBoarding(hexKey) {
+  const castle = GameState.hexObjects[selectedCastleHex];
+  if (!castle || castle.type !== 'castle') {
+    showNotification('Castle not found', 'error');
+    clearCastleInteraction();
+    return;
   }
 
-  renderCastles();
-}
+  if (!castle.passengers) castle.passengers = [];
 
-function handleCastleHousing(hexKey) {
-  // Check if there's a player at this hex
+  if (castle.passengers.length >= CASTLE_CAPACITY) {
+    showNotification(`Castle is full (${CASTLE_CAPACITY}/${CASTLE_CAPACITY})!`, 'error');
+    clearCastleInteraction();
+    return;
+  }
+
+  // Check for player at hex (castle only accepts players, NOT armies)
   const playersAtHex = GameState.getPlayersAtHex(hexKey);
-
   if (playersAtHex.length === 0) {
-    showNotification('No player at this hex', 'error');
+    showNotification('No player at this hex (castles only accept players)', 'error');
     return;
   }
 
   const { teamId, playerId, player } = playersAtHex[0];
-  const castle = GameState.hexObjects[selectedCastleHex];
 
-  if (!castle || castle.type !== 'castle') {
-    showNotification('Castle not found', 'error');
-    clearCastleHousing();
-    return;
-  }
-
-  // House the player in the castle
-  castle.housed = {
+  // Board the player
+  castle.passengers.push({
+    kind: 'player',
     teamId: teamId,
     playerId: playerId,
     name: player.name
-  };
+  });
 
   // Remove player from their hex position
   GameState.setPlayerPosition(teamId, playerId, null);
@@ -314,36 +369,54 @@ function handleCastleHousing(hexKey) {
   player.health = stats.health;
   player.maxHealth = stats.health;
 
-  showNotification(`${player.name} is now housed in castle (healed to full)!`);
-  clearCastleHousing();
+  // Revive dead players
+  if (player.isDead) {
+    player.isDead = false;
+    player.revives = (player.revives || 0) + 1;
+    const team = GameState.teams[teamId];
+    if (team) {
+      team.reviveCount = (team.reviveCount || 0) + 1;
+    }
+    showNotification(`${player.name} revived and boarded the castle! (-${REVIVE_COST}g, ${castle.passengers.length}/${CASTLE_CAPACITY})`);
+  } else {
+    showNotification(`${player.name} boarded the castle (healed to full)! (${castle.passengers.length}/${CASTLE_CAPACITY})`);
+  }
 
-  // Re-render
+  // Stay in boarding mode if not full
+  if (castle.passengers.length < CASTLE_CAPACITY) {
+    updateCastleHint();
+  } else {
+    clearCastleInteraction();
+  }
+
   renderCastles();
   renderPlayerMarkers();
   renderAllHealthBars();
 }
 
-function handleCastleEvicting(hexKey) {
+function handleCastleDisembarking(hexKey) {
   const castle = GameState.hexObjects[selectedCastleHex];
-
-  if (!castle || castle.type !== 'castle' || !castle.housed) {
-    showNotification('No resident to evict', 'error');
-    clearCastleHousing();
+  if (!castle || castle.type !== 'castle' || !castle.passengers || castle.passengers.length === 0) {
+    showNotification('No passengers to disembark', 'error');
+    clearCastleInteraction();
     return;
   }
 
-  const { teamId, playerId, name } = castle.housed;
+  if (selectedCastleDisembarkIndex === null) {
+    showNotification('Select a passenger from the panel first', 'error');
+    return;
+  }
 
-  // Set player position to the clicked hex
-  GameState.setPlayerPosition(teamId, playerId, hexKey);
+  // Remove the selected passenger
+  const passenger = castle.passengers.splice(selectedCastleDisembarkIndex, 1)[0];
 
-  // Clear housed player from castle
-  delete castle.housed;
+  if (passenger.kind === 'player') {
+    GameState.setPlayerPosition(passenger.teamId, passenger.playerId, hexKey);
+    showNotification(`${passenger.name} disembarked!`);
+  }
 
-  showNotification(`${name} left the castle`);
-  clearCastleHousing();
+  clearCastleInteraction();
 
-  // Re-render
   renderCastles();
   renderPlayerMarkers();
   renderAllHealthBars();
@@ -351,12 +424,74 @@ function handleCastleEvicting(hexKey) {
 
 function evictFromCastle(hexKey) {
   const castle = GameState.hexObjects[hexKey];
-  if (!castle?.housed) return;
+  if (!castle?.passengers || castle.passengers.length === 0) return;
 
-  const { teamId, playerId } = castle.housed;
-  // Player loses their position (will need to be placed again)
-  GameState.setPlayerPosition(teamId, playerId, null);
-  delete castle.housed;
+  for (const passenger of castle.passengers) {
+    if (passenger.kind === 'player') {
+      // Player loses their position (will need to be placed again)
+      GameState.setPlayerPosition(passenger.teamId, passenger.playerId, null);
+    }
+  }
+  castle.passengers = [];
+}
+
+// ============================================
+// Castle Passenger Selection Panel
+// ============================================
+
+function showCastlePassengerPanel(hexKey, passengers) {
+  closeCastlePassengerPanel();
+
+  const panel = document.createElement('div');
+  panel.id = 'castle-passenger-panel';
+  panel.className = 'fleet-passenger-panel';
+
+  const title = document.createElement('div');
+  title.className = 'fleet-passenger-title';
+  title.textContent = `Disembark (${passengers.length} aboard)`;
+  panel.appendChild(title);
+
+  const list = document.createElement('div');
+  list.className = 'fleet-passenger-list';
+
+  passengers.forEach((p, index) => {
+    const item = document.createElement('button');
+    item.className = 'fleet-passenger-item';
+
+    const icon = '\u2694';
+    const label = p.name;
+    item.textContent = `${icon} ${label}`;
+
+    item.addEventListener('click', () => {
+      selectedCastleDisembarkIndex = index;
+      selectedCastleHex = hexKey;
+      castleInteractionMode = 'disembarking';
+      closeCastlePassengerPanel();
+      showNotification(`Click a hex to place ${label}`);
+      updateCastleHint();
+      renderCastles();
+    });
+
+    list.appendChild(item);
+  });
+
+  panel.appendChild(list);
+
+  // Cancel button
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'fleet-passenger-cancel';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', () => {
+    clearCastleInteraction();
+  });
+  panel.appendChild(cancelBtn);
+
+  document.body.appendChild(panel);
+}
+
+function closeCastlePassengerPanel() {
+  const panel = document.getElementById('castle-passenger-panel');
+  if (panel) panel.remove();
 }
 
 // ============================================
@@ -372,12 +507,12 @@ function renderCastles() {
   for (const [hexKey, obj] of Object.entries(GameState.hexObjects)) {
     if (obj.type === 'castle') {
       const isSelected = hexKey === selectedCastleHex;
-      addCastleMarker(hexKey, obj.teamId, obj.housed, isSelected);
+      addCastleMarker(hexKey, obj.teamId, obj.passengers || [], isSelected);
     }
   }
 }
 
-function addCastleMarker(hexKey, teamId, housed, isSelected) {
+function addCastleMarker(hexKey, teamId, passengers, isSelected) {
   const hexEl = document.querySelector(`[data-hex="${hexKey}"]`);
   if (!hexEl) return;
 
@@ -404,60 +539,37 @@ function addCastleMarker(hexKey, teamId, housed, isSelected) {
   marker.addEventListener('click', (e) => {
     e.stopPropagation();
     const metaKey = e.metaKey || e.ctrlKey;
-    const shiftKey = e.shiftKey;
 
     if (isLandMode()) {
       onLandClick(hexKey, document.querySelector(`.hex[data-hex="${hexKey}"]`));
       return;
     }
-
-    // Handle housing mode clicks
-    if (castleHousingMode === 'housing') {
-      handleCastleHousing(hexKey);
+    if (castleInteractionMode === 'boarding') {
+      handleCastleBoarding(hexKey);
       return;
     }
-    if (castleHousingMode === 'evicting') {
-      handleCastleEvicting(hexKey);
+    if (castleInteractionMode === 'disembarking') {
+      handleCastleDisembarking(hexKey);
       return;
     }
-
-    // Delegate to other modes if active
     if (isBattleMode()) {
-      onBattleModeHexClick(hexKey, null, shiftKey);
+      onBattleModeHexClick(hexKey, null, e.shiftKey);
       return;
     }
     if (isMoveMode()) {
-      onMoveModeHexClick(hexKey, null, shiftKey);
+      onMoveModeHexClick(hexKey, null, e.shiftKey);
       return;
     }
     if (isTownMode()) {
-      // Delegate to town mode for upgrade
-      onTownModeHexClick(hexKey, null, metaKey);
+      onTownModeHexClick(hexKey, null, e.shiftKey, metaKey, e.altKey);
       return;
     }
     if (isPlayerMode()) {
-      // Delegate to player mode for revival at castle
       onPlayerModeHexClick(hexKey, null);
       return;
     }
-
-    // Shift+click to house/evict player (works in any mode or no mode)
-    if (shiftKey) {
-      const castle = GameState.hexObjects[hexKey];
-      if (castle) {
-        enterCastleHousing(hexKey, castle);
-      }
-      return;
-    }
-
-    // Castle mode: Cmd+click to remove
     if (isCastleMode()) {
-      if (metaKey) {
-        removeCastle(hexKey);
-        showNotification('Castle removed');
-      } else {
-        showNotification('Shift+click to house player. Cmd+click to remove.', 'error');
-      }
+      onCastleModeHexClick(hexKey, null, e.shiftKey, metaKey, e.altKey);
     }
   });
 
@@ -522,13 +634,41 @@ function addCastleMarker(hexKey, teamId, housed, isSelected) {
 
   marker.appendChild(icon);
 
-  // Add housed player name label if castle has a resident
-  if (housed) {
-    const housedTeam = GameState.teams[housed.teamId];
-    const housedColor = housedTeam?.border || '#ffffff';
+  // Passenger count badge
+  const count = passengers.length;
+  if (count > 0) {
+    const badgeX = centerX + iconSize / 2 - 6;
+    const badgeY = centerY + iconSize / 2 + 2;
 
-    // Name background for readability
-    const nameWidth = housed.name.length * 7 + 8;
+    const badgeBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    badgeBg.setAttribute('x', badgeX - 6);
+    badgeBg.setAttribute('y', badgeY - 10);
+    badgeBg.setAttribute('width', 16);
+    badgeBg.setAttribute('height', 14);
+    badgeBg.setAttribute('rx', 3);
+    badgeBg.setAttribute('fill', 'rgba(0, 0, 0, 0.85)');
+    badgeBg.setAttribute('stroke', teamColor);
+    badgeBg.setAttribute('stroke-width', 1);
+
+    const badgeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    badgeText.setAttribute('x', badgeX + 2);
+    badgeText.setAttribute('y', badgeY);
+    badgeText.setAttribute('text-anchor', 'middle');
+    badgeText.setAttribute('fill', '#fff');
+    badgeText.setAttribute('font-size', '10');
+    badgeText.setAttribute('font-weight', 'bold');
+    badgeText.textContent = count;
+
+    marker.appendChild(badgeBg);
+    marker.appendChild(badgeText);
+  }
+
+  // Passenger names label
+  if (count > 0) {
+    const names = passengers.map(p => p.name).join(', ');
+    const displayText = names.length > 30 ? names.substring(0, 27) + '...' : names;
+    const nameWidth = displayText.length * 6 + 8;
+
     const nameBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     nameBg.setAttribute('x', centerX - nameWidth / 2);
     nameBg.setAttribute('y', centerY - iconSize / 2 - 20);
@@ -536,19 +676,17 @@ function addCastleMarker(hexKey, teamId, housed, isSelected) {
     nameBg.setAttribute('height', 14);
     nameBg.setAttribute('rx', 3);
     nameBg.setAttribute('fill', 'rgba(0, 0, 0, 0.8)');
-    nameBg.setAttribute('stroke', housedColor);
+    nameBg.setAttribute('stroke', teamColor);
     nameBg.setAttribute('stroke-width', 1);
 
-    // Housed player name text
     const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     nameText.setAttribute('x', centerX);
     nameText.setAttribute('y', centerY - iconSize / 2 - 8);
     nameText.setAttribute('text-anchor', 'middle');
     nameText.setAttribute('fill', '#fff');
-    nameText.setAttribute('font-size', '11');
-    nameText.setAttribute('font-weight', 'bold');
-    nameText.classList.add('castle-housed-name');
-    nameText.textContent = housed.name;
+    nameText.setAttribute('font-size', '10');
+    nameText.classList.add('castle-passenger-names');
+    nameText.textContent = displayText;
 
     marker.appendChild(nameBg);
     marker.appendChild(nameText);

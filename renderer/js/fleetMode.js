@@ -34,6 +34,7 @@ function clearFleetInteraction() {
   selectedDisembarkIndex = null;
   closeFleetPassengerPanel();
   updateFleetHint();
+  renderFleets();
 }
 
 function getFleetInteractionMode() {
@@ -132,6 +133,10 @@ function onFleetModeHexClick(hexKey, element, shiftKey, metaKey, altKey) {
       showNotification('Shift: board | Option: disembark | Cmd: remove', 'error');
     }
   } else {
+    if (!isWaterHex(hexKey)) {
+      showNotification('Fleets can only be placed on water', 'error');
+      return;
+    }
     placeFleet(hexKey, currentTeam);
     showNotification('Fleet placed!');
   }

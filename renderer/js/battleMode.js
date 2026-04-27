@@ -117,21 +117,28 @@ function getAttackerAtHex(hexKey) {
       playerId,
       player,
       name: player.name,
-      range: PLAYER_ATTACK_RANGE
+      range: PLAYER_ATTACK_RANGE,
+      aerial: false,
+      canHitAerial: false
     };
   }
 
   // Check for hex objects that can attack
   const obj = GameState.hexObjects[hexKey];
   if (obj?.type === 'army') {
+    const subtype = obj.subtype || 'infantry';
+    const armyStats = ARMY_TYPES[subtype];
     return {
       type: 'army',
+      subtype: subtype,
       hexKey,
       teamId: obj.teamId,
       data: obj,
-      name: 'Army',
-      attack: 15,
-      range: ATTACK_RANGE.army
+      name: armyStats.name,
+      attack: armyStats.atk,
+      range: armyStats.range,
+      aerial: armyStats.aerial,
+      canHitAerial: armyStats.canHitAerial
     };
   }
 
@@ -143,7 +150,9 @@ function getAttackerAtHex(hexKey) {
       data: obj,
       name: 'Catapult',
       attack: 50,
-      range: ATTACK_RANGE.catapult
+      range: ATTACK_RANGE.catapult,
+      aerial: false,
+      canHitAerial: true
     };
   }
 
@@ -155,7 +164,9 @@ function getAttackerAtHex(hexKey) {
       data: obj,
       name: obj.passenger ? `Ship (${obj.passenger.name})` : 'Ship',
       attack: 30,
-      range: ATTACK_RANGE.ship
+      range: ATTACK_RANGE.ship,
+      aerial: false,
+      canHitAerial: true
     };
   }
 
@@ -169,7 +180,9 @@ function getAttackerAtHex(hexKey) {
       data: obj,
       name: `Fleet${names}`,
       attack: 50,
-      range: ATTACK_RANGE.fleet
+      range: ATTACK_RANGE.fleet,
+      aerial: false,
+      canHitAerial: true
     };
   }
 
@@ -194,19 +207,36 @@ function getTargetAtHex(hexKey) {
   // Check for hex object
   const obj = GameState.hexObjects[hexKey];
   if (obj) {
-    // Skip territory markers
+    // Territory hexes redirect damage to the parent building
     if (obj.type === 'castle-territory' || obj.type === 'town-territory') {
+      const centerHex = obj.centerHex;
+      const centerObj = GameState.hexObjects[centerHex];
+      if (centerObj && (centerObj.type === 'castle' || centerObj.type === 'town')) {
+        return {
+          type: centerObj.type,
+          hexKey: centerHex,
+          teamId: centerObj.teamId,
+          data: centerObj,
+          name: centerObj.type === 'castle' ? 'Castle' : 'Town',
+          isObject: true,
+          aerial: false
+        };
+      }
       return null;
     }
 
-    // Ship with passenger - target is the ship itself
+    // Determine if target is aerial
+    const isAerial = obj.type === 'army' && ARMY_TYPES[obj.subtype || 'infantry']?.aerial;
+
     return {
       type: obj.type,
+      subtype: obj.subtype,
       hexKey,
       teamId: obj.teamId,
       data: obj,
-      name: obj.type,
-      isObject: true
+      name: obj.type === 'army' ? (ARMY_TYPES[obj.subtype || 'infantry']?.name || 'Army') : obj.type,
+      isObject: true,
+      aerial: !!isAerial
     };
   }
 
@@ -299,6 +329,13 @@ function executeAttack(targetKey, isEdge = false) {
     return;
   }
 
+  // Check aerial targeting rules
+  if (target.aerial && !selectedAttacker.canHitAerial) {
+    showNotification(`${selectedAttacker.name} cannot hit aerial units!`, 'error');
+    clearBattleSelection();
+    return;
+  }
+
   // Check attack range
   const attackRange = selectedAttacker.range || 1;
   const distKey = isEdge ? targetKey.split(',').slice(0, 2).join(',') : targetKey;
@@ -330,7 +367,24 @@ function executeAttack(targetKey, isEdge = false) {
   const targetDamage = attackerStats.attack;
   applyDamage(target, targetDamage, attackerTeamId, attackerPlayerId);
 
-  showNotification(`${selectedAttacker.name} dealt ${targetDamage} damage to ${target.name}`);
+  // Counter-damage: players and armies deal defense damage back to attacker
+  let counterDamage = 0;
+  if (target.type === 'player') {
+    const defStats = getPlayerStats(getEffectiveGold(target.player));
+    counterDamage = defStats.defense;
+  } else if (target.type === 'army') {
+    const armyStats = ARMY_TYPES[target.subtype || 'infantry'];
+    counterDamage = armyStats.def;
+  } else if (OBJECT_DEFENSE[target.type]) {
+    counterDamage = OBJECT_DEFENSE[target.type];
+  }
+
+  if (counterDamage > 0) {
+    applyDamageToAttacker(selectedAttacker, counterDamage);
+    showNotification(`${selectedAttacker.name} dealt ${targetDamage} to ${target.name}, took ${counterDamage} counter-damage`);
+  } else {
+    showNotification(`${selectedAttacker.name} dealt ${targetDamage} damage to ${target.name}`);
+  }
 
   // Re-render everything
   renderAllHealthBars();
@@ -410,6 +464,24 @@ function applyDamage(target, damage, attackerTeamId, attackerPlayerId) {
   }
 }
 
+function applyDamageToAttacker(attacker, damage) {
+  if (attacker.type === 'player') {
+    const player = attacker.player || GameState.teams[attacker.teamId]?.players[attacker.playerId];
+    if (!player) return;
+    player.health -= damage;
+    if (player.health <= 0) {
+      destroyPlayer(attacker.teamId, attacker.playerId, attacker.name, null, null);
+    }
+  } else {
+    const obj = attacker.data || GameState.hexObjects[attacker.hexKey];
+    if (!obj) return;
+    obj.health -= damage;
+    if (obj.health <= 0) {
+      destroyObject(attacker.hexKey, attacker.type, attacker.name, attacker.teamId, null, null);
+    }
+  }
+}
+
 function destroyPlayer(teamId, playerId, name, attackerTeamId, attackerPlayerId) {
   // Don't remove player - mark as dead instead (can revive at town/castle)
   const player = GameState.teams[teamId]?.players[playerId];
@@ -432,11 +504,13 @@ function destroyPlayer(teamId, playerId, name, attackerTeamId, attackerPlayerId)
 }
 
 function destroyObject(hexKey, type, name, ownerTeamId, attackerTeamId, attackerPlayerId) {
-  // Track objectsLost per type for the owner team
+  // Track objectsLost — army subtypes tracked by subtype key
   if (ownerTeamId !== undefined && GameState.teams[ownerTeamId]) {
     const team = GameState.teams[ownerTeamId];
     if (!team.objectsLost) team.objectsLost = {};
-    team.objectsLost[type] = (team.objectsLost[type] || 0) + 1;
+    const obj = GameState.hexObjects[hexKey];
+    const lostKey = (type === 'army' && obj?.subtype) ? obj.subtype : type;
+    team.objectsLost[lostKey] = (team.objectsLost[lostKey] || 0) + 1;
   }
 
   // Credit the kill to the attacker (objects count as kills too)

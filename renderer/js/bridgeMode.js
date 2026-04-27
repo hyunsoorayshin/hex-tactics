@@ -62,7 +62,10 @@ function onBridgeModeHexClick(hexKey, element, metaKey) {
       showNotification('Cmd+click to remove. Right-click to rotate.', 'error');
     }
   } else {
-    // Place new bridge
+    if (isWaterHex(hexKey)) {
+      showNotification('Cannot place bridge on water', 'error');
+      return;
+    }
     placeBridge(hexKey, currentTeam);
     showNotification('Bridge placed!');
   }

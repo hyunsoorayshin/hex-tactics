@@ -15,11 +15,10 @@ function updateStatus() {
   const teamInfo = GameState.teams[currentTeam];
   const landModeActive = isLandMode();
   const playerModeActive = isPlayerMode();
-  const castleModeActive = isCastleMode();
+  const buildingModeActive = isBuildingMode();
   const bridgeModeActive = isBridgeMode();
   const armyModeActive = isArmyMode();
   const catapultModeActive = isCatapultMode();
-  const townModeActive = isTownMode();
   const wallModeActive = isWallMode();
   const shipModeActive = isShipMode();
   const fleetModeActive = isFleetMode();
@@ -31,11 +30,10 @@ function updateStatus() {
   let modeText = 'SELECT';
   if (landModeActive) modeText = 'LAND';
   if (playerModeActive) modeText = 'PLAYER';
-  if (castleModeActive) modeText = 'CASTLE';
+  if (buildingModeActive) modeText = 'BUILDING';
   if (bridgeModeActive) modeText = 'BRIDGE';
   if (armyModeActive) modeText = 'ARMY';
   if (catapultModeActive) modeText = 'CATAPULT';
-  if (townModeActive) modeText = 'TOWN';
   if (wallModeActive) modeText = 'WALL';
   if (shipModeActive) modeText = 'SHIP';
   if (fleetModeActive) modeText = 'FLEET';
@@ -44,8 +42,8 @@ function updateStatus() {
   if (battleModeActive) modeText = 'BATTLE';
   if (moveModeActive) modeText = 'MOVE';
 
-  const anyModeActive = landModeActive || playerModeActive || castleModeActive || bridgeModeActive ||
-                        armyModeActive || catapultModeActive || townModeActive || wallModeActive || shipModeActive ||
+  const anyModeActive = landModeActive || playerModeActive || buildingModeActive || bridgeModeActive ||
+                        armyModeActive || catapultModeActive || wallModeActive || shipModeActive ||
                         fleetModeActive || wagonModeActive || mineralModeActive ||
                         battleModeActive || moveModeActive;
 
@@ -55,7 +53,7 @@ function updateStatus() {
     <span class="divider">|</span>
     <span class="mode ${anyModeActive ? 'active' : ''}">${modeText}</span>
     <span class="divider">|</span>
-    <span class="hint">L: Land | C: Castle | B: Bridge | A: Army | D: Catapult | T: Town | W: Wall | S: Ship | F: Fleet | G: Wagon | N: Mineral | X: Battle | M: Move</span>
+    <span class="hint">L: Land | T: Building | B: Bridge | A: Army | D: Catapult | W: Wall | S: Ship | F: Fleet | G: Wagon | N: Mineral | X: Battle | M: Move</span>
   `;
 }
 

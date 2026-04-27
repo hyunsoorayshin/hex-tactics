@@ -144,6 +144,31 @@ ipcMain.on('save:gameState', async (event, data) => {
   }
 });
 
+// Handle terrain export
+ipcMain.on('export:terrain', async (event, data) => {
+  await ensureSavesDir();
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: 'Export Terrain Data',
+    defaultPath: path.join(SAVES_DIR, 'terrain.json'),
+    filters: [{ name: 'JSON', extensions: ['json'] }]
+  });
+
+  if (!result.canceled && result.filePath) {
+    try {
+      await fs.writeFile(result.filePath, data, 'utf-8');
+      mainWindow.webContents.send('game:saved', {
+        success: true,
+        filename: path.basename(result.filePath)
+      });
+    } catch (error) {
+      mainWindow.webContents.send('game:saved', {
+        success: false,
+        error: error.message
+      });
+    }
+  }
+});
+
 // Auto-load most recent save on startup
 ipcMain.handle('save:autoLoad', async () => {
   try {

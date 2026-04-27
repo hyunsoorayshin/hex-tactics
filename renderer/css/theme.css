@@ -154,20 +154,48 @@ html, body {
   stroke: var(--gold-light);
 }
 
+/* Terrain mode: water hex overlay */
+.hex.water-hex {
+  fill: rgba(30, 100, 220, 0.35);
+  stroke: rgba(30, 100, 220, 0.5);
+}
+
+/* Terrain marquee selection box */
+#terrain-marquee {
+  position: fixed;
+  border: 2px dashed rgba(30, 100, 220, 0.8);
+  background: rgba(30, 100, 220, 0.15);
+  pointer-events: none;
+  z-index: 9999;
+}
+
 .hex-edge {
   stroke: transparent;
-  stroke-width: 10;
+  stroke-width: 16;
   fill: none;
   pointer-events: stroke;
   cursor: pointer;
 }
 
 .hex-edge:hover {
-  stroke: rgba(212, 175, 55, 0.4);
+  stroke: rgba(212, 175, 55, 0.5);
 }
 
 .hex-edge.selected {
   stroke: var(--gold);
+}
+
+/* Wall mode: let clicks pass through markers to edges */
+.wall-mode-active .army-marker,
+.wall-mode-active .ship-marker,
+.wall-mode-active .fleet-marker,
+.wall-mode-active .wagon-marker,
+.wall-mode-active .town-marker,
+.wall-mode-active .castle-marker,
+.wall-mode-active .bridge-marker,
+.wall-mode-active .catapult-marker,
+.wall-mode-active .mineral-marker {
+  pointer-events: none;
 }
 
 /* ============================================

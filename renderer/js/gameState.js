@@ -47,6 +47,13 @@ const MOVE_SPEED = {
   castle: 0
 };
 
+// Object defense values (counter-damage to attacker)
+const OBJECT_DEFENSE = {
+  army: 10,
+  ship: 15,
+  fleet: 25
+};
+
 // Attack range (hexes)
 const ATTACK_RANGE = {
   army: 1,
@@ -208,7 +215,10 @@ const GameState = {
     let cost = 0;
     // Count hex objects
     for (const obj of Object.values(this.hexObjects)) {
-      if (obj.teamId === teamId && OBJECT_COSTS[obj.type]) {
+      if (obj.teamId !== teamId) continue;
+      if (obj.type === 'army' && obj.subtype && ARMY_TYPES[obj.subtype]) {
+        cost += ARMY_TYPES[obj.subtype].cost;
+      } else if (OBJECT_COSTS[obj.type]) {
         cost += OBJECT_COSTS[obj.type];
       }
     }
@@ -227,7 +237,9 @@ const GameState = {
     if (!team || !team.objectsLost) return 0;
     let cost = 0;
     for (const [type, count] of Object.entries(team.objectsLost)) {
-      if (OBJECT_COSTS[type]) {
+      if (ARMY_TYPES[type]) {
+        cost += ARMY_TYPES[type].cost * count;
+      } else if (OBJECT_COSTS[type]) {
         cost += OBJECT_COSTS[type] * count;
       }
     }
@@ -339,8 +351,8 @@ const GameState = {
         if (obj.passenger && obj.passenger.playerId === playerId && obj.passenger.teamId === fromTeamId) {
           delete obj.passenger;
         }
-        if (obj.housed && obj.housed.playerId === playerId && obj.housed.teamId === fromTeamId) {
-          delete obj.housed;
+        if (obj.passengers) {
+          obj.passengers = obj.passengers.filter(p => !(p.playerId === playerId && p.teamId === fromTeamId));
         }
       }
       player.position = null;

@@ -31,6 +31,7 @@ function clearShipInteraction() {
   shipInteractionMode = null;
   selectedShipHex = null;
   updateShipHint();
+  renderShips();
 }
 
 function getShipInteractionMode() {
@@ -135,7 +136,11 @@ function onShipModeHexClick(hexKey, element, shiftKey, metaKey, altKey) {
       showNotification('Shift: board | Option: disembark | Cmd: remove', 'error');
     }
   } else {
-    // Place new ship (no land ownership check)
+    // Place new ship (water only)
+    if (!isWaterHex(hexKey)) {
+      showNotification('Ships can only be placed on water', 'error');
+      return;
+    }
     placeShip(hexKey, currentTeam);
     showNotification('Ship placed!');
   }

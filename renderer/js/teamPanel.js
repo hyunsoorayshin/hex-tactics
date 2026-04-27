@@ -256,7 +256,7 @@ function renderPlayerList() {
       </div>
       <div class="player-level-row">
         <span class="player-level-badge" title="${rank.name}">Lv.${stats.level}</span>
-        <span class="player-level-detail" title="Next level at ${nextLevelGold}g">HP:${stats.health} ATK:${stats.attack}</span>
+        <span class="player-level-detail" title="Next level at ${nextLevelGold}g">HP:${stats.health} ATK:${stats.attack} DEF:${stats.defense}</span>
       </div>
       <div class="player-honor-row">
         <button class="honor-btn honor" title="Honor: +50g">&#9813;</button>

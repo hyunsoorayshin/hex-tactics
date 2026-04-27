@@ -50,8 +50,13 @@ window.addEventListener('keydown', (e) => {
       updateStatus();
       return;
     }
-    if (isCastleMode()) {
-      toggleCastleMode();
+    if (isBuildingMode()) {
+      if (getBuildingInteractionMode()) {
+        clearBuildingInteraction();
+        showNotification('Cancelled');
+        return;
+      }
+      toggleBuildingMode();
       updateStatus();
       return;
     }
@@ -67,11 +72,6 @@ window.addEventListener('keydown', (e) => {
     }
     if (isCatapultMode()) {
       toggleCatapultMode();
-      updateStatus();
-      return;
-    }
-    if (isTownMode()) {
-      toggleTownMode();
       updateStatus();
       return;
     }
@@ -141,6 +141,11 @@ window.addEventListener('keydown', (e) => {
       updateStatus();
       return;
     }
+    if (isTerrainMode()) {
+      toggleTerrainMode();
+      updateStatus();
+      return;
+    }
     resetView();
   }
 
@@ -153,11 +158,10 @@ window.addEventListener('keydown', (e) => {
   // L - toggle land mode
   if (e.key === 'l' || e.key === 'L') {
     if (isPlayerMode()) togglePlayerMode();
-    if (isCastleMode()) toggleCastleMode();
+    if (isBuildingMode()) toggleBuildingMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
     if (isCatapultMode()) toggleCatapultMode();
-    if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
     if (isFleetMode()) toggleFleetMode();
@@ -173,11 +177,10 @@ window.addEventListener('keydown', (e) => {
   // P - toggle player mode
   if (e.key === 'p' || e.key === 'P') {
     if (isLandMode()) toggleLandMode();
-    if (isCastleMode()) toggleCastleMode();
+    if (isBuildingMode()) toggleBuildingMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
     if (isCatapultMode()) toggleCatapultMode();
-    if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
     if (isFleetMode()) toggleFleetMode();
@@ -190,34 +193,13 @@ window.addEventListener('keydown', (e) => {
     console.log('Player mode:', isPlayerMode() ? 'ON' : 'OFF');
   }
 
-  // C - toggle castle mode
-  if (e.key === 'c' || e.key === 'C') {
-    if (isLandMode()) toggleLandMode();
-    if (isPlayerMode()) togglePlayerMode();
-    if (isBridgeMode()) toggleBridgeMode();
-    if (isArmyMode()) toggleArmyMode();
-    if (isCatapultMode()) toggleCatapultMode();
-    if (isTownMode()) toggleTownMode();
-    if (isWallMode()) toggleWallMode();
-    if (isShipMode()) toggleShipMode();
-    if (isFleetMode()) toggleFleetMode();
-    if (isWagonMode()) toggleWagonMode();
-    if (isMineralMode()) toggleMineralMode();
-    if (isBattleMode()) toggleBattleMode();
-    if (isMoveMode()) toggleMoveMode();
-    toggleCastleMode();
-    updateStatus();
-    console.log('Castle mode:', isCastleMode() ? 'ON' : 'OFF');
-  }
-
   // B - toggle bridge mode
   if (e.key === 'b' || e.key === 'B') {
     if (isLandMode()) toggleLandMode();
     if (isPlayerMode()) togglePlayerMode();
-    if (isCastleMode()) toggleCastleMode();
+    if (isBuildingMode()) toggleBuildingMode();
     if (isArmyMode()) toggleArmyMode();
     if (isCatapultMode()) toggleCatapultMode();
-    if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
     if (isFleetMode()) toggleFleetMode();
@@ -234,9 +216,8 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'a' || e.key === 'A') {
     if (isLandMode()) toggleLandMode();
     if (isPlayerMode()) togglePlayerMode();
-    if (isCastleMode()) toggleCastleMode();
+    if (isBuildingMode()) toggleBuildingMode();
     if (isBridgeMode()) toggleBridgeMode();
-    if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
     if (isFleetMode()) toggleFleetMode();
@@ -253,11 +234,9 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'd' || e.key === 'D') {
     if (isLandMode()) toggleLandMode();
     if (isPlayerMode()) togglePlayerMode();
-    if (isCastleMode()) toggleCastleMode();
+    if (isBuildingMode()) toggleBuildingMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
-    if (isCatapultMode()) toggleCatapultMode();
-    if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
     if (isFleetMode()) toggleFleetMode();
@@ -270,13 +249,13 @@ window.addEventListener('keydown', (e) => {
     console.log('Catapult mode:', isCatapultMode() ? 'ON' : 'OFF');
   }
 
-  // T - toggle town mode
+  // T - toggle building mode (town + castle)
   if (e.key === 't' || e.key === 'T') {
     if (isLandMode()) toggleLandMode();
     if (isPlayerMode()) togglePlayerMode();
-    if (isCastleMode()) toggleCastleMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
     if (isFleetMode()) toggleFleetMode();
@@ -284,20 +263,19 @@ window.addEventListener('keydown', (e) => {
     if (isMineralMode()) toggleMineralMode();
     if (isBattleMode()) toggleBattleMode();
     if (isMoveMode()) toggleMoveMode();
-    toggleTownMode();
+    toggleBuildingMode();
     updateStatus();
-    console.log('Town mode:', isTownMode() ? 'ON' : 'OFF');
+    console.log('Building mode:', isBuildingMode() ? 'ON' : 'OFF');
   }
 
   // W - toggle wall mode
   if (e.key === 'w' || e.key === 'W') {
     if (isLandMode()) toggleLandMode();
     if (isPlayerMode()) togglePlayerMode();
-    if (isCastleMode()) toggleCastleMode();
+    if (isBuildingMode()) toggleBuildingMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
     if (isCatapultMode()) toggleCatapultMode();
-    if (isTownMode()) toggleTownMode();
     if (isShipMode()) toggleShipMode();
     if (isFleetMode()) toggleFleetMode();
     if (isWagonMode()) toggleWagonMode();
@@ -313,11 +291,10 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 's' || e.key === 'S') {
     if (isLandMode()) toggleLandMode();
     if (isPlayerMode()) togglePlayerMode();
-    if (isCastleMode()) toggleCastleMode();
+    if (isBuildingMode()) toggleBuildingMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
     if (isCatapultMode()) toggleCatapultMode();
-    if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isFleetMode()) toggleFleetMode();
     if (isWagonMode()) toggleWagonMode();
@@ -333,11 +310,10 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'f' || e.key === 'F') {
     if (isLandMode()) toggleLandMode();
     if (isPlayerMode()) togglePlayerMode();
-    if (isCastleMode()) toggleCastleMode();
+    if (isBuildingMode()) toggleBuildingMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
     if (isCatapultMode()) toggleCatapultMode();
-    if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
     if (isFleetMode()) toggleFleetMode();
@@ -354,11 +330,10 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'g' || e.key === 'G') {
     if (isLandMode()) toggleLandMode();
     if (isPlayerMode()) togglePlayerMode();
-    if (isCastleMode()) toggleCastleMode();
+    if (isBuildingMode()) toggleBuildingMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
     if (isCatapultMode()) toggleCatapultMode();
-    if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
     if (isFleetMode()) toggleFleetMode();
@@ -375,11 +350,10 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'n' || e.key === 'N') {
     if (isLandMode()) toggleLandMode();
     if (isPlayerMode()) togglePlayerMode();
-    if (isCastleMode()) toggleCastleMode();
+    if (isBuildingMode()) toggleBuildingMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
     if (isCatapultMode()) toggleCatapultMode();
-    if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
     if (isFleetMode()) toggleFleetMode();
@@ -396,11 +370,10 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'x' || e.key === 'X') {
     if (isLandMode()) toggleLandMode();
     if (isPlayerMode()) togglePlayerMode();
-    if (isCastleMode()) toggleCastleMode();
+    if (isBuildingMode()) toggleBuildingMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
     if (isCatapultMode()) toggleCatapultMode();
-    if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
     if (isFleetMode()) toggleFleetMode();
@@ -416,11 +389,10 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'm' || e.key === 'M') {
     if (isLandMode()) toggleLandMode();
     if (isPlayerMode()) togglePlayerMode();
-    if (isCastleMode()) toggleCastleMode();
+    if (isBuildingMode()) toggleBuildingMode();
     if (isBridgeMode()) toggleBridgeMode();
     if (isArmyMode()) toggleArmyMode();
     if (isCatapultMode()) toggleCatapultMode();
-    if (isTownMode()) toggleTownMode();
     if (isWallMode()) toggleWallMode();
     if (isShipMode()) toggleShipMode();
     if (isFleetMode()) toggleFleetMode();
@@ -430,6 +402,33 @@ window.addEventListener('keydown', (e) => {
     toggleMoveMode();
     updateStatus();
     console.log('Move mode:', isMoveMode() ? 'ON' : 'OFF');
+  }
+
+  // H - toggle terrain mode
+  if (e.key === 'h' || e.key === 'H') {
+    if (isLandMode()) toggleLandMode();
+    if (isPlayerMode()) togglePlayerMode();
+    if (isBuildingMode()) toggleBuildingMode();
+    if (isBridgeMode()) toggleBridgeMode();
+    if (isArmyMode()) toggleArmyMode();
+    if (isCatapultMode()) toggleCatapultMode();
+    if (isWallMode()) toggleWallMode();
+    if (isShipMode()) toggleShipMode();
+    if (isFleetMode()) toggleFleetMode();
+    if (isWagonMode()) toggleWagonMode();
+    if (isMineralMode()) toggleMineralMode();
+    if (isBattleMode()) toggleBattleMode();
+    if (isMoveMode()) toggleMoveMode();
+    toggleTerrainMode();
+    updateStatus();
+    console.log('Terrain mode:', isTerrainMode() ? 'ON' : 'OFF');
+  }
+
+  // E - export terrain data
+  if (e.key === 'e' || e.key === 'E') {
+    if (isTerrainMode()) {
+      exportTerrainData();
+    }
   }
 
   // R - refresh player stats

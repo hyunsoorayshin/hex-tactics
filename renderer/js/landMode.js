@@ -25,6 +25,10 @@ function onLandClick(hexKey, element) {
     // Remove land if clicking same team
     removeLand(hexKey, element);
   } else {
+    if (isWaterHex(hexKey)) {
+      showNotification('Cannot claim water as land', 'error');
+      return;
+    }
     // Assign land to current team
     assignLand(hexKey, currentTeam, element);
   }

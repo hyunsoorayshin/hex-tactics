@@ -144,7 +144,7 @@ function createTeamPanelHTML() {
 
       <div class="team-section">
         <div class="team-section-header">
-          <span class="team-section-title">Players / Students</span>
+          <span class="team-section-title">Players</span>
           <button class="team-section-add" id="add-player-btn">+ Add Player</button>
         </div>
         <div class="player-list" id="player-list"></div>
@@ -238,7 +238,7 @@ function renderPlayerList() {
   const players = Object.entries(team.players || {});
 
   if (players.length === 0) {
-    playerList.innerHTML = '<div class="empty-message">No players yet. Click "+ Add Player" to add students.</div>';
+    playerList.innerHTML = '<div class="empty-message">No players yet. Click "+ Add Player" to add one.</div>';
     return;
   }
 
@@ -322,7 +322,7 @@ function renderPlayerList() {
 function addPlayer() {
   const currentTeam = getCurrentTeam();
   const playerId = 'player_' + Date.now();
-  GameState.addPlayer(currentTeam, playerId, 'New Student', 0);
+  GameState.addPlayer(currentTeam, playerId, 'New Player', 0);
   renderPlayerList();
   updateTeamStats();
 

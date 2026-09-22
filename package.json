@@ -1,14 +1,20 @@
 {
-  "name": "rayhaven2",
+  "name": "hex-tactics",
   "version": "1.0.0",
-  "description": "Electron game for students",
+  "description": "Desktop medieval hex-grid tactics game: team land ownership, castles, armies, ships and turn-based battles on a persistent map (Electron, vanilla JS)",
   "main": "main.js",
   "scripts": {
     "start": "electron ."
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "electron",
+    "game",
+    "hex-grid",
+    "tactics",
+    "strategy"
+  ],
+  "author": "Hyunsoo Ray Shin",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
     "electron": "^39.2.7"

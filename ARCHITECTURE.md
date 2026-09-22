@@ -2,20 +2,18 @@
 
 ## Overview
 
-Rayhaven is an Electron-based game for students featuring a hex-grid map with team-based land ownership, object placement, and player management. Students earn gold through academic performance (managed via CSV import script), which determines their level and combat stats.
+Rayhaven (published as Hex Tactics) is an Electron-based hex-grid tactics game featuring team-based land ownership, object placement, and player management. Each player's base gold is set externally (see *Gold Management* below) and determines their level and combat stats.
 
 ## Project Structure
 
 ```
-rayhaven2/
+hex-tactics/
 ├── main.js                 # Electron main process
 ├── preload.js              # IPC bridge (contextIsolation)
 ├── package.json
 ├── ARCHITECTURE.md
 ├── .gitignore
-├── saves/                  # Save files (git-ignored)
-│   ├── CSV/                # Student grade CSVs (per class)
-│   └── update_gold.py      # CSV → save file gold updater
+├── saves/                  # Save files (git-ignored, created in-app; not in the repo)
 ├── assets/
 │   ├── hex-objects/        # Objects placeable on hexes
 │   ├── edge-objects/       # Objects placeable on edges
@@ -281,7 +279,7 @@ Team management UI:
 - **Asset Counts:** Castle, Wall, Town, Army, Ship, Bridge
   - Shows count with lost in parentheses: `2 (1)` = 2 present, 1 lost
 - **Player List:**
-  - Name (editable), effective gold display (base gold managed by CSV script)
+  - Name (editable), effective gold display (base gold set externally)
   - Level badge with HP/ATK stats
   - Honor/dishonor buttons (+/-50g per point)
   - H/D badges (Honor, Dishonor counts)
@@ -339,23 +337,17 @@ Fantasy theme with black & gold palette:
 - Move mode animation (blue pulse on selected object)
 - All styling centralized here (no inline styles in HTML)
 
-### Gold Management
+### Gold Management (external)
 
-#### `saves/update_gold.py`
-External script for importing student grades as gold:
-- Reads CSV grade sheets from `saves/CSV/` (one per class, G5/G6)
-- G5 subjects: Voc Test, Sci Test, Sci HW, Read, Gram Test, Novel
-- G6 subjects: Voc Test, Sci HW, Sci Test, TFL Listening, Novel
-- Per date row: averages scored subjects, applies bonuses/penalties
-- **Bonuses:**
-  - +50 per 100-score on Voc Test, Sci HW, Novel, Gram Test
-  - Grand Slam: Voc Test + Sci HW + Novel all 100 = +300 extra
-  - Perfect Slam: All major test subjects 100 = +500 extra
-- **Penalties:**
-  - Voc Test: <80 = -40, <70 = -60, <60 = -80, <50 = -100
-  - Novel < 50 = -50
-- Matches students to save file by Korean name
-- Writes updated gold to save JSON (preserves honor/dishonor)
+The game never computes base gold itself. Each player's `gold` field in the
+save JSON is written from outside: edit it in-app or in the JSON, or feed it
+from your own script. The original run used an external import script (not
+part of this repository) that:
+- Read a per-team score sheet and averaged each player's scores per date
+- Applied fixed bonuses for perfect scores and fixed penalties for low ones
+- Matched players to their save-file entry by name
+- Wrote the updated gold into the save JSON, preserving honor/dishonor and
+  battle stats
 
 ## Script Load Order
 
@@ -409,11 +401,8 @@ User: Cmd+O
 
 ### Gold Update Flow
 ```
-Teacher updates CSV grades
-  → Run: python3 saves/update_gold.py
-  → Script reads CSV files from saves/CSV/
-  → Computes gold per student (avg + bonuses - penalties)
-  → Updates save JSON (preserves honor/dishonor, kills, deaths, etc.)
+External source of base gold is updated (script, spreadsheet, or by hand)
+  → Save JSON players[*].gold is updated (preserve honor/dishonor, kills, deaths, etc.)
   → Load updated save in game
   → Press R to refresh player stats
 ```
@@ -500,7 +489,7 @@ GameState = {
       players: {
         playerId: {
           name: string,
-          gold: number,       // Base gold (from CSV import)
+          gold: number,       // Base gold (set externally)
           honor: number,      // Honor points (+50g each)
           dishonor: number,   // Dishonor points (-50g each)
           position: "q,r" | null,
@@ -581,7 +570,7 @@ Available Gold = Merit Points + Mineral Gold - Land Cost - Present Objects Cost 
 
 Where:
 - **Merit Points** = Sum of all player effective gold
-- **Effective Gold** = Base gold (from CSV) + honor×50 - dishonor×50
+- **Effective Gold** = Base gold (set externally) + honor×50 - dishonor×50
 - **Mineral Gold** = mineralsDestroyed × 500g
 - **Land Cost** = land count × 10g
 - **Present Objects Cost** = Sum of costs for all currently placed objects
